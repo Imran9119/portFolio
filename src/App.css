@@ -1,0 +1,69 @@
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #0f0f0f;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+/* Sticky Navbar */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(15, 15, 15, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 10px 20px;
+  border-bottom: 1px solid #222;
+}
+
+/* Ant Tabs Dark Theme */
+.ant-tabs-tab {
+  color: #aaa !important;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.ant-tabs-tab:hover {
+  color: white !important;
+}
+
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1677ff !important;
+  font-weight: 600;
+}
+
+.ant-tabs-ink-bar {
+  background: #1677ff !important;
+  height: 3px !important;
+}
+
+/* Sections */
+section {
+  min-height: 100vh;
+  padding: 90px 30px;
+  align-items: center;
+  font-size: 40px;
+}
+.profilePhoto {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  margin-right: 20px;
+}
+.carouselImageWrapper {
+  height: 220px;       /* small fixed height */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* full image visible */
+}

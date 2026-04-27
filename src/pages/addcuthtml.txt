@@ -1,0 +1,2050 @@
+<!-- @if(SelectedTabIndex === 0){
+<nz-page-header
+  [nzTitle]="isEditMode ? isCheckerRole ? 'Customer Details' : 'Edit Customer' : isCheckerRole ? 'Approve/Reject Customer' : 'Add Customer'">
+  <nz-page-header-extra>
+    @if(isEditMode){
+    <button nz-button type="button" nzType="primary" (click)="editForm()" [title]="'Update Customer'">
+      <span nz-icon nzType="edit" nzTheme="outline"></span>
+    </button>
+    }
+  </nz-page-header-extra>
+</nz-page-header>
+} @else {
+<nz-page-header
+  [nzTitle]="isEditMode ? isCheckerRole ? 'User Details' : 'Edit User' : isCheckerRole ? 'Approve/Reject User' : 'Add User'">
+  <nz-page-header-extra>
+    @if(isEditMode){
+    <button nz-button type="button" nzType="primary" (click)="editForm()" [title]="'Update Users'">
+      <span nz-icon nzType="edit" nzTheme="outline"></span>
+    </button>
+    }
+  </nz-page-header-extra>
+
+</nz-page-header>
+} -->
+<nz-tabset [(nzSelectedIndex)]="activeTabIndex" (nzSelectChange)="changeTab([$event])"
+  [nzTabBarExtraContent]="extraTemplate">
+  <nz-tab nzTitle="Customer Details"></nz-tab>
+  <nz-tab nzTitle="User Details"></nz-tab>
+  @if(custType === 'Corporate'){
+  <nz-tab nzTitle="Rules"></nz-tab>
+  }
+</nz-tabset>
+
+<ng-template #extraTemplate>
+  @if((!isCheckerRole) && ( !isInCheckerQueue)){
+  <nz-space>
+    <!-- <button *nzSpaceItem nz-button type="button" nzType="primary" (click)="resetForm()" [title]="'Reset'">
+      <nz-icon nzType="reload" nzTheme="outline" />
+    </button> -->
+    <!-- <button *nzSpaceItem nz-button type="button" nzType="primary" (click)="editForm()"
+      [title]="SelectedTabIndex === 0 ? 'Update Customer' : SelectedTabIndex === 1 ? 'Update Users': 'Update Rules'">
+      <span nz-icon nzType="edit" nzTheme="outline"></span>
+    </button> -->
+    @if(SelectedTabIndex === 1 || SelectedTabIndex === 2){
+    <button *nzSpaceItem nz-button type="button" nzType="primary" (click)="addForm()"
+      [title]=" SelectedTabIndex === 1 ? 'Add Users': SelectedTabIndex === 2 ? 'Add Rules' : ''">
+      <span nz-icon nzType="plus" nzTheme="outline"></span>
+      {{SelectedTabIndex === 1 ? 'Add Users': SelectedTabIndex === 2 ? 'Add Rules' : ''}}
+      
+    </button>
+    }
+  </nz-space>
+  }
+</ng-template>
+
+
+<div class="y-scroll">
+  @if(SelectedTabIndex === 0){
+  <nz-card [nzTitle]="multipleCifTemplate">
+
+    <ng-template #multipleCifTemplate>
+      <nz-space>
+        <h3 *nzSpaceItem>
+          {{ (isCheckerRole || isEditMode) ? "Multiple CIF's" : "Do you want to add multiple CIF's for this
+          customer?" }}
+        </h3>
+        <form nz-form [formGroup]="addCustForm" *nzSpaceItem nzLayout="vertical">
+          <nz-switch formControlName="multipleCif" nzCheckedChildren="Yes" nzUnCheckedChildren="No" [nzDisabled]="(isCheckerRole) || (isInCheckerQueue)"></nz-switch>
+        </form>
+      </nz-space>
+    </ng-template>
+    @if((!isCheckerRole) && ( !isInCheckerQueue)){
+    <form nz-form [formGroup]="addCustForm" nzLayout="vertical">
+      <div nz-row nzGutter="16" class="mb-1" formGroupName="cifs">
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>CIF</nz-form-label>
+            <nz-form-control>
+              <nz-input-group nzSearch [nzAddOnAfter]="suffixIconButton">
+                <input type="text" nz-input placeholder="Enter CIF ID to search" formControlName="cifId" maxlength="16"
+                  libAlphanumeric libUpperCase class="text-left" />
+              </nz-input-group>
+              <ng-template #suffixIconButton>
+                <button nz-button nzType="primary" nzSearch
+                  (click)="searchCifData(addCustForm.get('cifs.cifId')?.value, 'add')" type="button">
+                  <nz-icon nzType="search" />
+                </button>
+              </ng-template>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%" class="t-19">
+          <nz-form-item>
+            <nz-form-control>
+              <nz-space>
+                <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+                  (click)="resetMultiCifForm()">
+                  <span nz-icon nzType="reload" nzTheme="outline"></span>
+                </button>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+    </form>
+    }
+    <nz-table #multiCifTable [nzBordered]="true" [nzData]="multipleCifList" nzNoResult="No data Found"
+      [nzShowTotal]="rangeTemplate" [nzPageSize]="5" nzShowSizeChanger [nzPageSizeOptions]="[5, 10]">
+      <thead>
+        <tr>
+          <th nzWidth="60px">Sr No</th>
+          <th nzWidth="120px">Cif</th>
+          <th>Corporate Name</th>
+          <th>Corporate ID</th>
+          <th>IE Code</th>
+          <th>Selected Accounts</th>
+          @if((!isCheckerRole) && ( !isInCheckerQueue)){
+          <th nzWidth="80px" nzRight>Action</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (data of multiCifTable.data; track data; let i = $index) {
+        <tr [ngClass]="{ 'highlight-row': (data.isEditable === 1 && isCheckerRole) }">
+          <td>{{ (multiCifTable.nzPageIndex - 1) * multiCifTable.nzPageSize + (i + 1) }}</td>
+          <td>{{ data.cifId }}</td>
+          <td nzEllipsis [title]="data.custName">{{ data.custName }}</td>
+          <td nzEllipsis [title]="data.corporateId  !== '0' ? data.corporateId: 'NA'">{{ (data.corporateId &&
+            data.corporateId !== '0') ?
+            data.corporateId : 'NA'}}</td>
+          <td nzEllipsis [title]="data.ieCode">{{ data.ieCode ? data.ieCode : 'NA' }}</td>
+          <td nzEllipsis [title]="data.selectedAccountsList?.join(', ')">{{ data.selectedAccountsList?.join(', ') }}
+          </td>
+          @if((!isCheckerRole) && ( !isInCheckerQueue)){
+          <td nzRight>
+            <nz-space>
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Edit"
+                (click)="editMultiCif(data, (multiCifTable.nzPageIndex - 1) * multiCifTable.nzPageSize + i);searchCifData(data.cifId, 'edit')">
+                <nz-icon nzType="edit" nzTheme="outline" />
+              </a>
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Delete" (click)="deleteMultiCif(data)">
+                <nz-icon nzType="delete" nzTheme="outline" />
+              </a>
+            </nz-space>
+          </td>
+          }
+        </tr>
+        }
+      </tbody>
+      <ng-template #rangeTemplate let-range="range" let-total>
+        {{ range[0] }}-{{ range[1] }} of {{ total }} items
+      </ng-template>
+    </nz-table>
+  </nz-card>
+
+  @if(custType === 'Corporate'){
+  <nz-card class="domain-card">
+    <form nz-form [formGroup]="addCustForm" nzLayout="vertical">
+      <div nz-row nzGutter="16">
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label [nzRequired]="addCustForm.get('multipleCif')?.value || custType ==='Corporate'">Domain
+              Id</nz-form-label>
+            <nz-form-control nzErrorTip="Pleasr Enter valid Domain Id">
+              <input nz-input type="text" placeholder="Enter Min 4 Char" minlength="4" formControlName="domainId"
+                libSpecialHype libUpperCase (ngModelChange)="verifyDomainId($event)" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+    </form>
+  </nz-card>
+
+  <nz-card [nzTitle]="gruopEnableTemplate">
+    <ng-template #gruopEnableTemplate>
+      <nz-space>
+        <h3 *nzSpaceItem> {{ (isCheckerRole) ? 'User group enable' : 'Do you want to enable user
+          group?'}}</h3>
+        <form nz-form [formGroup]="addCustForm" *nzSpaceItem nzLayout="vertical">
+          <nz-switch formControlName="groupEnable" nzCheckedChildren="Yes" nzUnCheckedChildren="No" [nzDisabled]="(isCheckerRole) || (isInCheckerQueue)"></nz-switch>
+        </form>
+      </nz-space>
+    </ng-template>
+    @if(!isAddGroupButtonEnabled){
+    @if((!isCheckerRole) && ( !isInCheckerQueue)){
+    <form nz-form [formGroup]="addCustForm" nzLayout="vertical">
+      <div nz-row nzGutter="16" class="1" formGroupName="groups">
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Group Name</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groups.groupName')?.getRawValue() ?? ''">
+              <input libUpperCase nz-input formControlName="groupName" libAlphanumericInput
+                (ngModelChange)="verifyGroupName($event)" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Group Description</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groups.groupDescription')?.getRawValue() ?? ''">
+              <input libUpperCase nz-input formControlName="groupDescription" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>CIF's </nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groups.cifId')?.getRawValue() ?? ''">
+              <nz-select formControlName="cifId" nzMode="multiple" [nzMaxTagCount]="2" nzPlaceHolder="Please select"
+                nzAllowClear [nzNotFoundContent]="selectData">
+                @if(multipleCifList.length > 0){
+                @for (option of multipleCifList; track option) {
+                <nz-option [nzLabel]="option.cifId" [nzValue]="option.cifId"></nz-option>
+                }
+                }
+
+                <ng-template #selectData>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please add Cif details
+                  </div>
+                </ng-template>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Account Numbers</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groups.selectedAccounts')?.getRawValue() ?? ''">
+              <nz-select formControlName="selectedAccounts" nzMode="multiple" [nzMaxTagCount]="2"
+                nzPlaceHolder="Please select" nzAllowClear [nzNotFoundContent]="selectcifs">
+                @if(selectedAccountDropdown.length > 0){
+                @for (option of selectedAccountDropdown; track option) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+                }
+                <ng-template #selectcifs>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please select CIF's
+                  </div>
+                </ng-template>
+              </nz-select>
+              <!-- <nz-select formControlName="selectedAccounts" nzPlaceHolder="Select Account Numbers"
+                      nzAllowClear [nzNotFoundContent]="selectcifs">
+
+                      <nz-option nzCustomContent [nzLabel]="'Select All'" [nzValue]="'ALL'">
+                        <label nz-checkbox [(ngModel)]="selectAllAccounts" (ngModelChange)="toggleAllAccounts($event)">
+                          Select All
+                        </label>
+                      </nz-option>
+
+                      @for (acc of selectedAccountDropdown; track acc) {
+                    <nz-option nzCustomContent [nzValue]="acc">
+                      <label nz-checkbox [ngModel]="(addCustForm.get('groups.selectedAccounts')?.value || []).includes(acc)"
+                        (ngModelChange)="onAccountChange(acc, $event)">
+                        {{ acc }}
+                      </label>
+                    </nz-option>
+                      }
+
+                      <ng-template #selectcifs>
+                        <div nz-typography nzType="warning" class="text-center">
+                          Please select CIF's
+                        </div>
+                      </ng-template>
+
+                    </nz-select> -->
+
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Group Role</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groups.groupRole')?.getRawValue() ?? ''">
+              <nz-select formControlName="groupRole" nzPlaceHolder="Please select">
+                <!-- @for (option of listOfOption; track option) { -->
+                <nz-option [nzLabel]="'MAKER'" [nzValue]="'MAKER'"></nz-option>
+                <nz-option [nzLabel]="'CHECKER'" [nzValue]="'CHECKER'"></nz-option>
+                <nz-option [nzLabel]="'AUTHORIZER'" [nzValue]="'AUTHORIZER'"></nz-option>
+                <!-- } -->
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>From Limit</nz-form-label>
+            <nz-form-control>
+              <!-- <input nz-input type="text" formControlName="transactionLimit" maxlength="16"
+                            (input)="alphanumericInput($event)" /> -->
+              <!-- <nz-input-group nzCompact> -->
+              <!-- <nz-input-group nzAddOnBefore="From"> -->
+              <input nz-input [inputMask]="currencyInputMask" formControlName="fromLimit" maxlength="23" />
+              <!-- </nz-input-group>
+                            <nz-input-group nzAddOnBefore="To">
+                              <input nz-input [inputMask]="currencyInputMask" formControlName="toLimit" maxlength="23" />
+                            </nz-input-group>
+                          </nz-input-group> -->
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>To Limit</nz-form-label>
+            <nz-form-control>
+              <input nz-input [inputMask]="currencyInputMask" formControlName="toLimit" maxlength="23" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 40%"></div>
+
+        <div nz-col nzFlex="0 1 20%" nz-flex nzJustify="flex-end" class="t-19">
+          <nz-form-item>
+            <nz-form-control>
+              <nz-space>
+                <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+                  (click)="resetGroupEnableForm()">
+                  <span nz-icon nzType="reload" nzTheme="outline"></span>
+                </button>
+                <button nz-button *nzSpaceItem [nz-tooltip]="isEditGroupEnable ? 'Update Group' : 'Add Group'"
+                  class="ant-btn-outline h-32" type="button" (click)="addGroupEnable()">
+                  <span nz-icon [nzType]="isEditGroupEnable ? 'save' : 'plus-circle'" nzTheme="outline"></span>
+                </button>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+    </form>
+    }
+    <nz-table #groupEnableTable [nzBordered]="true" nzNoResult="No data Found" [nzData]="groupEnableList"
+      [nzShowTotal]="rangeTemplate" [nzPageSize]="5" [nzScroll]="{x:'1620px'}" nzShowSizeChanger
+      [nzPageSizeOptions]="[5, 10]">
+      <thead>
+        <tr>
+          <th nzWidth="60px">Sr No</th>
+          <th>Group Name</th>
+          <th>Group Description</th>
+          <th>CIFs</th>
+          <th>Selected Accounts</th>
+          <th>Group Role</th>
+          <th>From Limit</th>
+          <th>To Limit</th>
+          @if((!isCheckerRole) && ( !isInCheckerQueue)){
+          <th nzWidth="80px" nzAlign="center" nzRight>Action</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (data of groupEnableTable.data; track data.groupName; let i = $index) {
+        <tr [ngClass]="{ 'highlight-row': (data.isEditable === 1 && isCheckerRole) }">
+          <td>{{ (groupEnableTable.nzPageIndex - 1) * groupEnableTable.nzPageSize + (i + 1) }}</td>
+          <td nzEllipsis [title]="data.groupName">{{data.groupName}}</td>
+          <td nzEllipsis [title]="data.groupDescription">{{data.groupDescription}}</td>
+          <td nzEllipsis [title]="data.cifId?.join(', ')">{{data.cifId?.join(', ')}}</td>
+          <td nzEllipsis [title]="data.selectedAccounts?.join(', ')">{{data.selectedAccounts?.join(', ')}}</td>
+          <td nzEllipsis [title]="data.groupRole">{{data.groupRole}}</td>
+          <td nzAlign="right" nzEllipsis [title]="data.fromLimit">{{data.fromLimit | sCurrency : data.fromLimit}}</td>
+          <td nzAlign="right" nzEllipsis [title]="data.toLimit">{{data.toLimit | sCurrency : data.toLimit}}</td>
+          @if((!isCheckerRole) && ( !isInCheckerQueue)){
+          <td nzAlign="center" nzRight>
+            <nz-space>
+              @if((!isCheckerRole) && ( !isInCheckerQueue)){
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Edit" [class.disabled]="!data.isEnabled"
+                (click)="data.isEnabled ? editGroupEnable(data, (groupEnableTable.nzPageIndex - 1) * groupEnableTable.nzPageSize + i): null">
+                <nz-icon nzType="edit" nzTheme="outline" />
+              </a>
+              }
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip
+                [nzTooltipTitle]="data.isEnabled ? 'Enabled' : 'Disabled'"
+                [ngStyle]="{ color: data.isEnabled ? 'green' : 'red' }"
+                (click)="(!isCheckerRole && !isEditGroupEnable) ? disableGroup(data, (groupEnableTable.nzPageIndex - 1) * groupEnableTable.nzPageSize + i) : null">
+                <span nz-icon nzType="stop" nzTheme="fill"></span>
+              </a>
+              @if((!isCheckerRole) && ( !isInCheckerQueue)){
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Delete"
+                (click)="!isEditGroupEnable && deleteGroupEnable(data)"
+                [attr.disabled]="isEditGroupEnable ? true : null" >
+                <nz-icon nzType="delete" nzTheme="outline" />
+              </a>
+              }
+            </nz-space>
+          </td>
+          }
+        </tr>
+        }
+      </tbody>
+      <ng-template #rangeTemplate let-range="range" let-total>
+        {{ range[0] }}-{{ range[1] }} of {{ total }} items
+      </ng-template>
+    </nz-table>
+    }
+  </nz-card>
+  }
+  }@else if(SelectedTabIndex === 1) {
+  <nz-card class="pt-12">
+    <nz-card-tab>
+      <nz-tabset [(nzSelectedIndex)]="activeUserIndex" (nzSelectChange)="changeUserTab($event)">
+        <nz-tab nzTitle="Individual Users">
+          <!-- <nz-card [nzTitle]="addUserTemplate" class="card-padding"> -->
+          <!-- <ng-template #addUserTemplate> -->
+          <!-- </ng-template> -->
+          <!-- @if((!isCheckerRole && showForm === true) && (isEditMode && !isInCheckerQueue)){
+          <h3 class="mt-8">Add individual user</h3>
+          <form nz-form [formGroup]="addCustForm" nzLayout="vertical">
+            <div nz-row nzGutter="16" class="mb-1" formGroupName="users">
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>User ID</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.userId')?.getRawValue() ?? ''">
+                    <input nz-input placeholder="Enter Min 4 Char" minlength="4" formControlName="userId"
+                      libSpecialHypeUnderscore libUpperCase (ngModelChange)="verifyUserId($event,'user')" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>First Name</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.userFName')?.getRawValue() ?? ''">
+                    <input libUpperCase nz-input type="text" formControlName="userFName" libAlphanumericInput />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Last Name</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.userLName')?.getRawValue() ?? ''">
+                    <input libUpperCase nz-input type="text" formControlName="userLName" libAlphanumericInput />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Mobile No</nz-form-label>
+                  <nz-form-control nzErrorTip="Enter valid mobile no."
+                    [title]="addCustForm.get('users.mobileNo')?.getRawValue() ?? ''">
+                    <nz-input-group [nzAddOnBefore]="countryCode">
+                      <input nz-input [inputMask]="mobileNumberMask" formControlName="mobileNo" maxlength="10"
+                        class="text-left" />
+                    </nz-input-group></nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Email Id</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.emailId')?.getRawValue() ?? ''">
+                    <input nz-input type="email" formControlName="emailId" (input)="emailInput($event)"
+                      (ngModelChange)="checkDomain()" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Cif</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.cifId')?.getRawValue() ?? ''">
+                    <nz-select formControlName="cifId" nzMode="multiple" nzPlaceHolder="Please select" nzAllowClear
+                      [nzNotFoundContent]="selectData">
+                      @for (option of multipleCifList; track option) {
+                      <nz-option [nzLabel]="option.cifId" [nzValue]="option.cifId"></nz-option>
+                      }
+                      <ng-template #selectData>
+                        <div nz-typography nzType="warning" class="text-center">
+                          Please add Cif details
+                        </div>
+                      </ng-template>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Account No</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.accountNo')?.getRawValue() ?? ''">
+                    <nz-select formControlName="accountNo" nzMode="multiple" [nzMaxTagCount]="2"
+                      nzPlaceHolder="Please select" [ngClass]="{'readonly': isUserAccReadOnly}">
+                      @for (option of accNoAgainstCif; track option) {
+                      <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                      }
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              @if(this.custType === 'Corporate'){
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>User Role</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.groupUserRole')?.getRawValue() ?? ''">
+                    <nz-select formControlName="groupUserRole" nzMode="multiple" [nzMaxTagCount]="2"
+                      nzPlaceHolder="Please select" [ngClass]="{'readonly': isUserFieldEnabled}">
+                      <nz-option [nzLabel]="'MAKER'" [nzValue]="'MAKER'"></nz-option>
+                      <nz-option [nzLabel]="'CHECKER'" [nzValue]="'CHECKER'"></nz-option>
+                      <nz-option [nzLabel]="'AUTHORIZER'" [nzValue]="'AUTHORIZER'"></nz-option>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              }
+              @if(this.custType === 'Corporate'){
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>From Limit</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input [inputMask]="currencyInputMask" formControlName="fromLimit" maxlength="23" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>To Limit</nz-form-label>
+                  <nz-form-control>
+                    <input nz-input [inputMask]="currencyInputMask" formControlName="toLimit" maxlength="23" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            }
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Product Access</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.productAccess')?.getRawValue() ?? ''">
+                    <nz-select formControlName="productAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                      nzPlaceHolder="Please select">
+                      @for (option of productAccessList; track $index) {
+                      <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                      }
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Sub Product Access</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('users.subProductAccess')?.getRawValue() ?? ''">
+                    <nz-select formControlName="subProductAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                      nzPlaceHolder="Please select" [nzNotFoundContent]="selectsubProductData">
+                      @for (option of subProductAccessList; track $index) {
+                      <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                      }
+                      <ng-template #selectsubProductData>
+                        <div nz-typography nzType="warning" class="text-center">
+                          Please select Product Access
+                        </div>
+                      </ng-template>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div  nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-control class="m-t-18">
+                    <nz-space>
+                      <nz-form-label *nzSpaceItem>Is Two Factor Auth Enabled</nz-form-label>
+                      <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0 && (isTwoFactorEnabled === 1 || isTwoFactorEnabled === 2)"
+                        formControlName="isTwoFactorEnabled"></nz-switch>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div  nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-control class="m-t-18">
+                    <nz-space>
+                      <nz-form-label *nzSpaceItem>Is Email</nz-form-label>
+                      <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0 && (isEmail === 1 || isEmail === 2)"
+                        formControlName="isEmail"></nz-switch>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div  nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-control class="m-t-18">
+                    <nz-space>
+                      <nz-form-label *nzSpaceItem>Is SMS</nz-form-label>
+                      <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0 && (isSms === 1 || isSms === 2)"
+                        formControlName="isSms"></nz-switch>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="1 1 40%" class="t-19 mb-2" nz-flex nzJustify="flex-end">
+                <nz-form-item>
+                  <nz-form-control>
+                    <nz-space>
+                      <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+                        (click)="resetAddUserForm()">
+                        <span nz-icon nzType="reload" nzTheme="outline"></span>
+                      </button>
+                      <button nz-button *nzSpaceItem [nz-tooltip]="isEditAddUser ? 'Update User':'Add User'"
+                        class="ant-btn-outline h-32" type="button" (click)="addUser()">
+                        <span nz-icon [nzType]="isEditAddUser ? 'save' : 'plus-circle'" nzTheme="outline"></span>
+                      </button>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+          </form>
+          } -->
+          <nz-table #addUserTable [nzBordered]="true" nzNoResult="No data Found" [nzData]="addUserList"
+            [nzShowTotal]="rangeTemplate" [nzPageSize]="5" nzShowSizeChanger [nzPageSizeOptions]="[5, 10]"
+            [nzScroll]="{x:'1620px'}" [ngClass]="(isCheckerRole) ?'mt-8': ''">
+            <thead>
+              <tr>
+                <th nzWidth="60px" nzAlign="center" nzLeft>Sr No</th>
+                <th nzWidth="100px">User Id</th>
+                <th nzWidth="120px">First Name</th>
+                <th nzWidth="120px">Last Name</th>
+                <th nzWidth="120px">Mobile No</th>
+                <th nzWidth="180px">Email Id</th>
+                <th nzWidth="120px">Cif</th>
+                <th nzWidth="150px">Acc No</th>
+                @if(this.custType === 'Corporate'){
+                <th nzWidth="150px">User Role</th>
+                }
+                <th nzWidth="200px">Product Access</th>
+                <th nzWidth="220px">Sub Product Access</th>
+                <th nzWidth="140px">Is Two factor Enabled</th>
+                <th nzWidth="80px">Is Email</th>
+                <th nzWidth="80px">Is SMS</th>
+                @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                <th nzWidth="80px" nzAlign="center" nzRight>Action</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (data of addUserTable.data; track data; let i = $index) {
+              <tr [ngClass]="{ 'highlight-row': (data.isEditable === 1 && isCheckerRole) }">
+                <td nzAlign="center" nzLeft>{{ (addUserTable.nzPageIndex - 1) * addUserTable.nzPageSize + (i + 1) }}
+                </td>
+                <td nzEllipsis [title]="data.userId">{{ data.userId }}</td>
+                <td nzEllipsis [title]="data.userFName">{{ data.userFName }}</td>
+                <td nzEllipsis [title]="data.userLName">{{ data.userLName }}</td>
+                <td nzEllipsis [title]="maskMobileNumber(data.mobileNo)">{{ maskMobileNumber(data.mobileNo) }}</td>
+                <td nzEllipsis [title]="maskEmail(data.emailId)">{{ maskEmail(data.emailId) }}</td>
+                <td nzEllipsis [title]="data.cifId?.length > 1 ? data.cifId?.join(', ') : data.cifId">
+                  {{ data.cifId?.length > 1 ? data.cifId?.join(', ') : data.cifId }}</td>
+                <td nzEllipsis [title]="data.accountNo?.length > 1 ? data.accountNo?.join(', ') : data.accountNo">
+                  {{ data.accountNo?.length > 1 ? data.accountNo?.join(', ') :data.accountNo}}</td>
+                @if(this.custType === 'Corporate'){
+                <td nzEllipsis
+                  [title]="data.groupUserRole?.length > 1 ? data.groupUserRole?.join(', ') : data.groupUserRole">
+                  {{ data.groupUserRole?.length > 1 ? data.groupUserRole?.join(',') : data.groupUserRole}}</td>
+                }
+                <td nzEllipsis [title]="data.productAccess">{{ data.productAccess }}</td>
+                <td nzEllipsis [title]="data.subProductAccess">{{ data.subProductAccess }}</td>
+                <td nzEllipsis>
+                  {{ data.isTwoFactorEnabled === 1 || data.isTwoFactorEnabled === 2 ? 'Yes' : 'No' }}
+                </td>
+                <td nzEllipsis>
+                  {{data.isEmail === 1 || data.isEmail === 2 ? 'Yes' : 'No' }}
+                </td>
+                <td nzEllipsis>
+                  {{ data.isSms === 1 || data.isSms === 2 ? 'Yes' : 'No' }}
+                </td>
+                @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                <td nzAlign="center" nzRight>
+                  <nz-space>
+                    @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                    <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Edit" [class.disabled]="!data.isEnabled"
+                      (click)="data.isEnabled ? editUser(data, (addUserTable.nzPageIndex - 1) * addUserTable.nzPageSize + i): null">
+                      <nz-icon nzType="edit" nzTheme="outline" />
+                    </a>
+                    }
+
+                    <a href="javascript:void(0)" *nzSpaceItem nz-tooltip
+                      [nzTooltipTitle]="data.isEnabled ? 'Enabled' : 'Disabled'"
+                      [ngStyle]="{ color: data.isEnabled ? 'green' : 'red' }"
+                      (click)="(!isCheckerRole && !isEditAddUser) ? disableUser(data, (addUserTable.nzPageIndex - 1) * addUserTable.nzPageSize + i) : null">
+                      <span nz-icon nzType="stop" nzTheme="fill"></span>
+                    </a>
+
+                    @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                    <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Delete"
+                      (click)="deleteUser(data)" 
+                      >
+                      <nz-icon nzType="delete" nzTheme="outline" />
+                    </a>
+                    }
+                  </nz-space>
+                </td>
+                }
+              </tr>
+              }
+            </tbody>
+            <ng-template #rangeTemplate let-range="range" let-total>
+              {{ range[0] }}-{{ range[1] }} of {{ total }} items
+            </ng-template>
+          </nz-table>
+          <!-- </nz-card> -->
+        </nz-tab>
+        @if(custType === 'Corporate'){
+        <nz-tab nzTitle="Users in group">
+          <!-- <nz-card [nzTitle]="addGroupUserTemplate" class="card-padding"> -->
+          <!-- <ng-template #addGroupUserTemplate> -->
+          <!-- </ng-template> -->
+
+          <!-- @if((!isCheckerRole && showForm === true) && (isEditMode && !isInCheckerQueue)){
+          <h3 class='mt-8'>Add user to group</h3>
+          <form nz-form [formGroup]="addCustForm" nzLayout="vertical">
+            <div nz-row nzGutter="16" class="mb-1" formGroupName="groupUser">
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label [nzRequired]="isUserGroupNameRequired">Group Name</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('groupUser.groupName')?.getRawValue() ?? ''">
+                    <nz-select formControlName="groupName" nzMode="multiple" nzPlaceHolder="Please select"
+                      [nzNotFoundContent]="selectGrpData">
+                      @for (option of groupEnableList; track option) {
+                      <nz-option [nzLabel]="option.groupName" [nzValue]="option.groupName"></nz-option>
+                      }
+                      <ng-template #selectGrpData>
+                        <div nz-typography nzType="warning" class="text-center">
+                          Please add Group Enable Details
+                        </div>
+                      </ng-template>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>User ID</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('groupUser.userId')?.getRawValue() ?? ''">
+                    <input nz-input placeholder="Enter Min 4 Char" minlength="4" formControlName="userId"
+                      libSpecialHypeUnderscore libUpperCase (ngModelChange)="verifyUserId($event,'group')" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>First Name</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('groupUser.userFName')?.getRawValue() ?? ''">
+                    <input libUpperCase nz-input type="text" formControlName="userFName" libAlphanumericInput />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Last Name</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('groupUser.userLName')?.getRawValue() ?? ''">
+                    <input libUpperCase nz-input type="text" formControlName="userLName" libAlphanumericInput />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Mobile No</nz-form-label>
+                  <nz-form-control nzErrorTip="Enter valid mobile no."
+                    [title]="addCustForm.get('groupUser.mobileNo')?.getRawValue() ?? ''">
+                    <nz-input-group [nzAddOnBefore]="countryCode">
+                      <input nz-input [inputMask]="mobileNumberMask" formControlName="mobileNo" maxlength="10"
+                        class="text-left" />
+                    </nz-input-group></nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Email Id</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('groupUser.emailId')?.getRawValue() ?? ''">
+                    <input nz-input type="email" formControlName="emailId" (input)="emailInput($event)"
+                      (ngModelChange)="checkDomain()" />
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Product Access</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('groupUser.productAccess')?.getRawValue() ?? ''">
+                    <nz-select formControlName="productAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                      nzPlaceHolder="Please select">
+                      @for (option of productAccessList; track $index) {
+                      <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                      }
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-label nzRequired>Sub Product Access</nz-form-label>
+                  <nz-form-control [title]="addCustForm.get('groupUser.subProductAccess')?.getRawValue() ?? ''">
+                    <nz-select formControlName="subProductAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                      nzPlaceHolder="Please select" [nzNotFoundContent]="selectsubProductData">
+                      @for (option of subProductAccessList1; track $index) {
+                      <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                      }
+                      <ng-template #selectsubProductData>
+                        <div nz-typography nzType="warning" class="text-center">
+                          Please select Product Access
+                        </div>
+                      </ng-template>
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div  nz-col nzFlex="0 1 20%">
+                <nz-form-item>
+                  <nz-form-control class="m-t-18">
+                    <nz-space>
+                      <nz-form-label *nzSpaceItem>Is Two Factor Auth Enabled</nz-form-label>
+                      <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0  && (isTwoFactorEnabled === 1 || isTwoFactorEnabled === 2)"
+                        formControlName="isTwoFactorEnabled"></nz-switch>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div  nz-col nzFlex="0 1 10%">
+                <nz-form-item>
+                  <nz-form-control class="m-t-18">
+                    <nz-space>
+                      <nz-form-label *nzSpaceItem>Is Email</nz-form-label>
+                      <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0  && (isEmail === 1 || isEmail === 2)"
+                        formControlName="isEmail"></nz-switch>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+              <div  nz-col nzFlex="0 1 10%">
+                <nz-form-item>
+                  <nz-form-control class="m-t-18">
+                    <nz-space>
+                      <nz-form-label *nzSpaceItem>Is SMS</nz-form-label>
+                      <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0  && (isSms === 1 || isSms === 2)"
+                        formControlName="isSms"></nz-switch>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+
+              <div nz-col nzFlex="1 1 40%" class="t-19 mb-2" nz-flex nzJustify="flex-end">
+                <nz-form-item>
+                  <nz-form-control>
+                    <nz-space>
+                      <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+                        (click)="resetAddGUserForm()">
+                        <span nz-icon nzType="reload" nzTheme="outline"></span>
+                      </button>
+                      <button nz-button *nzSpaceItem [nz-tooltip]="isEditGAddUser ? 'Update User':'Add User'"
+                        class="ant-btn-outline h-32" type="button" (click)="addGroupUser()">
+                        <span nz-icon [nzType]="isEditGAddUser ? 'save' : 'plus-circle'" nzTheme="outline"></span>
+                      </button>
+                    </nz-space>
+                  </nz-form-control>
+                </nz-form-item>
+              </div>
+            </div>
+          </form>
+          } -->
+          <nz-table [ngClass]="(isCheckerRole) ?'mt-8': ''" #addGroupUserTable [nzBordered]="true"
+            nzNoResult="No data Found" [nzData]="addGUserList" [nzShowTotal]="rangeGroupTemplate" [nzPageSize]="5"
+            nzShowSizeChanger [nzPageSizeOptions]="[5, 10]" [nzScroll]="{x:'1320px'}">
+            <thead>
+              <tr>
+                <th nzWidth="60px" nzAlign="center" nzLeft>Sr No</th>
+                <th nzWidth="120px">Group Name</th>
+                <th nzWidth="120px">Group Role</th>
+                <th nzWidth="100px">User Id</th>
+                <th nzWidth="120px">First Name</th>
+                <th nzWidth="120px">Last Name</th>
+                <th nzWidth="120px">Mobile No</th>
+                <th nzWidth="180px">Email Id</th>
+                <th nzWidth="200px">Product Access</th>
+                <th nzWidth="220px">Sub Product Access</th>
+                <th nzWidth="140px">Is Two factor Enabled</th>
+                <th nzWidth="80px">Is Email</th>
+                <th nzWidth="80px">Is SMS</th>
+                @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                <th nzWidth="80px" nzAlign="center" nzRight>Action</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (data of addGroupUserTable.data; track data; let i = $index) {
+              <tr [ngClass]="{ 'highlight-row': (data.isEditable === 1 && isCheckerRole) }">
+                <td nzAlign="center" nzLeft>{{ (addGroupUserTable.nzPageIndex - 1) * addGroupUserTable.nzPageSize + (i +
+                  1) }}
+                </td>
+                <td nzEllipsis [title]="data.groupName">{{ data.groupName }}</td>
+                <td nzEllipsis [title]="data.groupRole?.length > 1 ? data.groupRole?.join(', ') : data.groupRole">
+                  {{ data.groupRole?.length > 1 ? data.groupRole?.join(',') : data.groupRole}}</td>
+                <td nzEllipsis [title]="data.userId">{{ data.userId }}</td>
+                <td nzEllipsis [title]="data.userFName">{{ data.userFName }}</td>
+                <td nzEllipsis [title]="data.userLName">{{ data.userLName }}</td>
+                <td nzEllipsis [title]="maskMobileNumber(data.mobileNo)">{{ maskMobileNumber(data.mobileNo) }}</td>
+                <td nzEllipsis [title]="maskEmail(data.emailId)">{{ maskEmail(data.emailId) }}</td>
+                <td nzEllipsis [title]="data.productAccess">{{ data.productAccess }}</td>
+                <td nzEllipsis [title]="data.subProductAccess">{{ data.subProductAccess }}</td>
+                <td nzEllipsis>
+                  {{ data.isTwoFactorEnabled === 1 || data.isTwoFactorEnabled === 2 ? 'Yes' : 'No' }}
+                </td>
+                <td nzEllipsis>
+                  {{ data.isEmail === 1 || data.isEmail === 2 ? 'Yes' : 'No' }}
+                </td>
+                <td nzEllipsis>
+                  {{ data.isSms === 1 || data.isSms === 2 ? 'Yes' : 'No' }}
+                </td>
+                @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                <td nzAlign="center" nzRight>
+                  <nz-space>
+                    @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                    <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Edit" [class.disabled]="!data.isEnabled"
+                      (click)="data.isEnabled ? editGUser(data, (addGroupUserTable.nzPageIndex - 1) * addGroupUserTable.nzPageSize + i): null">
+                      <nz-icon nzType="edit" nzTheme="outline" />
+                    </a>
+                    }
+
+                    <a href="javascript:void(0)" *nzSpaceItem nz-tooltip
+                      [nzTooltipTitle]="data.isEnabled ? 'Enabled' : 'Disabled'"
+                      [ngStyle]="{ color: data.isEnabled ? 'green' : 'red' }"
+                      (click)="(!isCheckerRole && !isEditGAddUser) ? disableGUser(data, (addGroupUserTable.nzPageIndex - 1) * addGroupUserTable.nzPageSize + i) : null">
+                      <span nz-icon nzType="stop" nzTheme="fill"></span>
+                    </a>
+
+                    @if((!isCheckerRole) && ( !isInCheckerQueue)){
+                    <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Delete"
+                      (click)="deleteGUser(data)"
+                      >
+                      <nz-icon nzType="delete" nzTheme="outline" />
+                    </a>
+                    }
+                  </nz-space>
+                </td>
+                }
+              </tr>
+              }
+            </tbody>
+            <ng-template #rangeGroupTemplate let-range="range" let-total>
+              {{ range[0] }}-{{ range[1] }} of {{ total }} items
+            </ng-template>
+          </nz-table>
+          <!-- </nz-card> -->
+        </nz-tab>
+        }
+      </nz-tabset>
+    </nz-card-tab>
+  </nz-card>
+  }@else {
+  @if(custType === 'Corporate'){
+  <nz-card [nzTitle]="addRuleTemplate">
+    <ng-template #addRuleTemplate>
+      <h3>{{ (isCheckerRole || isInCheckerQueue)? 'Rules' : 'Add Rule'}}</h3>
+    </ng-template>
+    <!-- @if((!isCheckerRole && showForm === true) && (isEditMode && !isInCheckerQueue)){
+    <form nz-form [formGroup]="rulesForm" nzLayout="vertical">
+
+      <div nz-row nzGutter="16">
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Rule Name</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter rule">
+              <input nz-input formControlName="ruleName" placeholder="Enter Rule Name" libUpperCase
+                libAlphanumericInput />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Apply Rule On</nz-form-label>
+            <nz-form-control nzErrorTip="Please select rule apply on">
+              <nz-select formControlName="setRuleOn" nzPlaceHolder="Select">
+                <nz-option nzValue="DOMAIN" nzLabel="DOMAIN"></nz-option>
+                <nz-option nzValue="CIF" nzLabel="CIF"></nz-option>
+                <nz-option nzValue="ACCOUNT" nzLabel="ACCOUNT"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        @switch(rulesForm.get('setRuleOn')?.value){
+        @case('DOMAIN'){
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label [nzRequired]="addCustForm.get('multipleCif')?.value || custType ==='Corporate'">Domain
+              Id</nz-form-label>
+            <nz-form-control nzErrorTip="Pleasr Enter valid Domain Id">
+              <input nz-input type="text" placeholder="Enter Min 4 Char" minlength="4" formControlName="domainId"
+                libSpecialHype libUpperCase (ngModelChange)="verifyDomainId($event)" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+
+        @case('CIF'){
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>CIF</nz-form-label>
+            <nz-form-control nzErrorTip="Please select Cifs">
+              <nz-select formControlName="cifId" nzMode="multiple" [nzMaxTagCount]="2" nzPlaceHolder="Please select"
+                nzAllowClear [nzNotFoundContent]="selectData">
+                @if(multipleCifList.length > 0){
+                @for (option of multipleCifList; track option) {
+                <nz-option [nzLabel]="option.cifId" [nzValue]="option.cifId"></nz-option>
+                }
+                }
+
+                <ng-template #selectData>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please add Cif details
+                  </div>
+                </ng-template>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+
+        @case('ACCOUNT'){
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Accounts</nz-form-label>
+            <nz-form-control nzErrorTip="Please select accounts">
+              <nz-select formControlName="accounts" nzMode="multiple" [nzMaxTagCount]="2" nzPlaceHolder="Please select">
+                @for (option of rulesAccList; track option) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+        }
+
+        <div nz-col nzFlex="0 1 20%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Rule Authorization</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter rule authorization"
+              [nzValidateStatus]="checkerCountControl && authorizerCountControl">
+              <nz-input-group nzCompact>
+                <input nz-input type="number" formControlName="checkerCount" placeholder="0" class="mw-25" />
+                <input nz-input value="C" disabled class="mw-15 align-center" />
+                <input nz-input value="+" disabled class="mw-15 align-center" />
+                <input nz-input type="number" formControlName="authorizerCount" placeholder="0" class="mw-25" />
+                <input nz-input value="A" disabled class="mw-15 align-center" />
+              </nz-input-group>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 20%" class="t-19 mb-2">
+          <nz-form-item>
+            <nz-form-control>
+              <nz-space>
+                <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+                  (click)="resetRules()">
+                  <span nz-icon nzType="reload" nzTheme="outline"></span>
+                </button>
+                <button nz-button *nzSpaceItem [nz-tooltip]="isEditRuleEnable ? 'Update Rule':'Add Rule'"
+                  class="ant-btn-outline h-32" type="button" (click)="submitRule()">
+                  <span nz-icon [nzType]="isEditRuleEnable ? 'save' : 'plus-circle'" nzTheme="outline"></span>
+                </button>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+      </div>
+
+      @if(rulesForm.get('checkerCount')?.value > 0 || rulesForm.get('authorizerCount')?.value > 0){
+      <div nz-row nzGutter="16">
+        @if(rulesForm.get('checkerCount')?.value > 0){
+        <div nz-col nzFlex="0 1 50%">
+          <div formArrayName="checkers">
+            <div *ngFor="let checker of checkers.controls; let i = index" [formGroupName]="i">
+              
+              <div nz-row nzGutter="16">
+                <nz-col nzFlex="0 1 15%" nzAlign="center">
+                  <h3> Checker {{ i + 1 }} </h3>
+                </nz-col>
+                
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>Group</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="groupList" nzMode="multiple" nzPlaceHolder="Select Groups">
+                        @for (option of checkerGroupList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>User</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="userList" nzMode="multiple" nzPlaceHolder="Select Users">
+                        @for (option of checkerUserList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+
+        @if(rulesForm.get('authorizerCount')?.value > 0){
+        <div nz-col nzFlex="0 1 50%">
+
+          <div formArrayName="authorizers">
+            <div *ngFor="let auth of authorizers.controls; let i = index" [formGroupName]="i">
+              
+              <div nz-row nzGutter="16">
+
+                <nz-col nzFlex="0 1 18%" nzAlign="center">
+                  <h3> Authorizer {{ i + 1 }} </h3>
+                </nz-col>
+
+                
+
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>Group</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="groupList" nzMode="multiple" nzPlaceHolder="Select Groups">
+                        @for (option of authorizerGroupList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>User</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="userList" nzMode="multiple" nzPlaceHolder="Select Users">
+                        @for (option of authorizerUserList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+        }
+      </div>
+      }
+
+    </form>
+    } -->
+
+    <nz-table #rulesTable [nzBordered]="true" nzNoResult="No data Found" [nzData]="rulesList"
+      [nzShowTotal]="rulesRangeTemplate" [nzPageSize]="5" nzShowSizeChanger [nzPageSizeOptions]="[5, 10]">
+      <thead>
+        <tr>
+          <th nzWidth="60px" nzAlign="center">Sr. No</th>
+          <th>Rule Name</th>
+          <th>Domain Id</th>
+          <th>Cif</th>
+          <th>Selected Accounts</th>
+          <th>Rule Authorization</th>
+          @if((!isCheckerRole) && ( !isInCheckerQueue)){
+          <th nzWidth="80px" nzAlign="center" nzRight>Action</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (data of rulesTable.data; track data.ruleName; let i = $index) {
+        <tr [ngClass]="{ 'highlight-row': (data.isEditable === 1 && isCheckerRole) }">
+          <td nzAlign="center">{{ (rulesTable.nzPageIndex - 1) * rulesTable.nzPageSize + (i + 1) }}</td>
+          <td nzEllipsis [title]="data.ruleName">
+            <nz-space>
+              <span *nzSpaceItem>{{ data.ruleName }}</span>
+              <!-- <a *nzSpaceItem nz-tooltip="Preview" href="javascript:void(0)" (click)="showRulePreview(data)">
+              <span nz-icon nzType="eye" nzTheme="outline"></span>
+            </a> -->
+            </nz-space>
+          </td>
+          <td nzEllipsis [title]="data.domainId">{{data.domainId}}</td>
+          <td nzEllipsis [title]="data.cifId?.join(', ')">{{data.cifId?.join(', ')}}</td>
+          <td nzEllipsis [title]="data.accounts?.join(', ')">{{data.accounts?.join(', ')}}</td>
+          <td nzEllipsis [title]="data.authMatrix">{{data.authMatrix}}</td>
+          <!-- <td nzAlign="right" nzEllipsis [title]="data.fromLimit">{{data.fromLimit | sCurrency : data.fromLimit}}</td>
+          <td nzAlign="right" nzEllipsis [title]="data.toLimit">{{data.toLimit | sCurrency : data.toLimit}}</td> -->
+          @if((!isCheckerRole) && ( !isInCheckerQueue)){
+          <td nzAlign="center" nzRight>
+            <nz-space>
+              @if((!isCheckerRole) && ( !isInCheckerQueue)){
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Edit" [class.disabled]="!data.isEnabled"
+                (click)="data.isEnabled ? editRuleItem(data, (rulesTable.nzPageIndex - 1) * rulesTable.nzPageSize + i) : null">
+                <nz-icon nzType="edit" nzTheme="outline" />
+              </a>
+              }
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip
+                [nzTooltipTitle]="data.isEnabled ? 'Enabled' : 'Disabled'"
+                [ngStyle]="{ color: data.isEnabled ? 'green' : 'red' }"
+                (click)="(!isCheckerRole && !isEditRuleEnable) ? disableRule(data, (rulesTable.nzPageIndex - 1) * rulesTable.nzPageSize + i) : null">
+                <span nz-icon nzType="stop" nzTheme="fill"></span>
+              </a>
+              @if((!isCheckerRole) && ( !isInCheckerQueue)){
+              <a href="javascript:void(0)" *nzSpaceItem nz-tooltip="Delete"
+                (click)="deleteRule(data)"
+                >
+                <nz-icon nzType="delete" nzTheme="outline" />
+              </a>
+              }
+            </nz-space>
+          </td>
+          }
+        </tr>
+        }
+      </tbody>
+      <ng-template #rulesRangeTemplate let-range="range" let-total>
+        {{ range[0] }}-{{ range[1] }} of {{ total }} items
+      </ng-template>
+    </nz-table>
+  </nz-card>
+  }
+  }
+</div>
+
+
+
+<div nz-row class="float-footer">
+  <div nz-col nzFlex="1 1 auto">
+    <nz-space>
+      <!-- @if(SelectedTabIndex === 1){
+      <button *nzSpaceItem nz-button nzType="default" type="button" (click)="activeTabIndex = 0">
+        Previous
+      </button>
+      } -->
+      <button *nzSpaceItem nz-button class="ant-btn-ghost" type="button" (click)="onCancelForm()">
+        Cancel
+      </button>
+
+    </nz-space>
+  </div>
+  <div nz-col nzFlex="0 1 auto" nz-flex nzJustify="flex-end">
+    <nz-space>
+      @if(!isCheckerRole && isEditMode && !isInCheckerQueue){
+      <button *nzSpaceItem nz-button class="ant-btn-ghost" type="button" (click)="deleteCIF()">
+        Delete
+      </button>
+      <button *nzSpaceItem nz-button nzType="primary" type="submit" (click)="submitAddCustForm('Update')">
+        Update
+      </button>
+      }
+      @if(!isCheckerRole && !isEditMode){
+      <button *nzSpaceItem nz-button nzType="primary" type="submit" (click)="submitAddCustForm('Submit')">
+        <!-- @if(SelectedTabIndex === 1){  -->
+        Submit
+        <!-- } @else{ Save & Exit } -->
+      </button>
+      }
+      @if(isCheckerRole && !isEditMode ) {
+      <button *nzSpaceItem nz-button type="button" (click)="confirmCheckerAction('Reject')">
+        Reject
+      </button>
+      <button *nzSpaceItem nz-button nzType="primary" type="button" (click)="confirmCheckerAction('Approve')">
+        Approve
+      </button>
+      }
+      <!-- @if(SelectedTabIndex === 0){
+      <button *nzSpaceItem nz-button nzType="default" type="button" (click)="changeTabIndex(1)">
+        Next
+      </button>
+      } -->
+    </nz-space>
+  </div>
+</div>
+
+<ng-template #confirmTemplate>
+
+  <div class="confirm-container">
+    @if(checkerActionText === 'Reject') {
+    <div>
+      <span>Please confirm to <b>{{ checkerActionText }}</b></span>
+    </div>
+    }
+
+    @if(checkerActionText !== 'Reject') {
+    <div class="approve-header">
+      <span nz-icon nzType="safety-certificate" nzTheme="fill" class="approve-icon"></span>
+      <span class="approve-title">Please confirm from the checklist below to Approve</span>
+    </div>
+
+    <div class="approval-list">
+      <div class="approval-row" *ngIf="showCustomer" [ngClass]="{'checkbox-error': customerDirty && !approveCustomer}">
+        <label nz-checkbox [(ngModel)]="approveCustomer"></label>
+        <span class="approval-text">
+          Customer Details
+        </span>
+      </div>
+
+      <div class="approval-row" *ngIf="showUser" [ngClass]="{'checkbox-error': userDirty && !approveUser}">
+        <label nz-checkbox [(ngModel)]="approveUser"></label>
+        <span class="approval-text">
+          User Details
+        </span>
+      </div>
+
+      <div class="approval-row" *ngIf="showRules" [ngClass]="{'checkbox-error': rulesDirty && !approveRules}">
+        <label nz-checkbox [(ngModel)]="approveRules"></label>
+        <span class="approval-text">
+          Rules Configuration
+        </span>
+      </div>
+    </div>
+    }
+  </div>
+</ng-template>
+
+<ng-template #confirmTemplate1>
+
+  <div class="confirm-container">
+
+    @if(checkerActionText === 'Reject'){
+    <p class="confirm-title">
+      Please confirm to <b>{{ checkerActionText }}</b>
+    </p>
+    } @else {
+    <nz-divider nzText="Approval Checklist"></nz-divider>
+
+    <nz-space nzDirection="vertical" nzSize="middle" class="w-full">
+
+      <div class="approval-item" *ngIf="showCustomer" [ngClass]="{'checkbox-error': customerDirty && !approveCustomer}">
+        <label nz-checkbox [(ngModel)]="approveCustomer">
+          <span class="approval-text">Approve Customer Details</span>
+        </label>
+      </div>
+
+      <div class="approval-item" *ngIf="showUser" [ngClass]="{'checkbox-error': userDirty && !approveUser}">
+        <label nz-checkbox [(ngModel)]="approveUser">
+          <span class="approval-text">Approve User Details</span>
+        </label>
+      </div>
+
+      <div class="approval-item" *ngIf="showRules" [ngClass]="{'checkbox-error': rulesDirty && !approveRules}">
+        <label nz-checkbox [(ngModel)]="approveRules">
+          <span class="approval-text">Approve Rules</span>
+        </label>
+      </div>
+
+    </nz-space>
+    }
+
+
+  </div>
+
+</ng-template>
+
+<ng-template #rulePreview let-data>
+  <div class="rule-preview">
+
+    <nz-card nzTitle="Rule Details" nzSize="small" class="mb-2">
+      <div nz-row nzGutter="16">
+
+        <div nz-col nzSpan="12">
+          <b>Rule Name:</b>
+          <nz-tag nzColor="blue">{{ data.ruleName }}</nz-tag>
+        </div>
+
+        <div nz-col nzSpan="12">
+          <b>Apply On:</b>
+          <nz-tag nzColor="purple">{{ data.setRuleOn }}</nz-tag>
+        </div>
+
+        <div nz-col nzSpan="12">
+          <b>Domain:</b>
+          {{ data.domainId || 'N/A' }}
+        </div>
+
+        <div nz-col nzSpan="12">
+          <b>Authorization:</b>
+          <nz-tag nzColor="green">
+            {{ data.checkerCount }}C + {{ data.authorizerCount }}A
+          </nz-tag>
+        </div>
+
+        @if(data.cifId?.length){
+        <div nz-col nzSpan="24">
+          <b>CIF:</b><br />
+          <nz-tag *ngFor="let c of data.cifId">{{ c }}</nz-tag>
+        </div>
+        }
+
+        @if(data.accounts?.length){
+        <div nz-col nzSpan="24">
+          <b>Accounts:</b><br />
+          <nz-tag nzColor="orange" *ngFor="let acc of data.accounts">
+            {{ acc }}
+          </nz-tag>
+        </div>
+        }
+
+      </div>
+    </nz-card>
+
+    @if(data.checkers?.length > 0){
+    <nz-card nzTitle="Checkers" nzSize="small" class="mb-2">
+      @for (checker of data.checkers; track checker; let i = $index) {
+      <nz-card nzType="inner" [nzTitle]="'Checker ' + (i + 1)" class="mb-1">
+
+        <p><b>Groups:</b></p>
+        <nz-tag nzColor="blue" *ngFor="let g of checker.groupList">
+          {{ g }}
+        </nz-tag>
+
+        <p class="mt-1"><b>Users:</b></p>
+        <nz-tag nzColor="geekblue" *ngFor="let u of checker.userList">
+          {{ u }}
+        </nz-tag>
+
+      </nz-card>
+      }
+    </nz-card>
+    }
+
+    @if(data.authorizers?.length > 0){
+    <nz-card nzTitle="Authorizers" nzSize="small">
+      @for (auth of data.authorizers; track auth; let i = $index) {
+      <nz-card nzType="inner" [nzTitle]="'Authorizer ' + (i + 1)" class="mb-1">
+
+        <p><b>Groups:</b></p>
+        <nz-tag nzColor="purple" *ngFor="let g of auth.groupList">
+          {{ g }}
+        </nz-tag>
+
+        <p class="mt-1"><b>Users:</b></p>
+        <nz-tag nzColor="magenta" *ngFor="let u of auth.userList">
+          {{ u }}
+        </nz-tag>
+
+      </nz-card>
+      }
+    </nz-card>
+    }
+
+  </div>
+</ng-template>
+
+<nz-modal [(nzVisible)]="isIndividualTab" [nzWidth]="'1100px'" [nzTitle]="modalTitle" [nzContent]="modalContent"
+  [nzFooter]="userFormFooter" (nzOnCancel)="handleCancel()" [nzMaskClosable]="false">
+  <ng-template #modalTitle>{{editallforms ? 'Update Individual User' : 'Add Individual User'}}</ng-template>
+  <ng-template #modalContent>
+    <form nz-form [formGroup]="addCustForm" nzLayout="vertical">
+      <div nz-row nzGutter="16" class="mb-1" formGroupName="users">
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>User ID</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.userId')?.getRawValue() ?? ''">
+              <!-- <input nz-input formControlName="userId" /> -->
+              <input nz-input placeholder="Enter Min 4 Char" minlength="4" formControlName="userId"
+                libSpecialHypeUnderscore libUpperCase (ngModelChange)="verifyUserId($event,'user')" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>First Name</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.userFName')?.getRawValue() ?? ''">
+              <input libUpperCase nz-input type="text" formControlName="userFName" libAlphanumericInput />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Last Name</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.userLName')?.getRawValue() ?? ''">
+              <input libUpperCase nz-input type="text" formControlName="userLName" libAlphanumericInput />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Mobile No</nz-form-label>
+            <nz-form-control nzErrorTip="Enter valid mobile no."
+              [title]="addCustForm.get('users.mobileNo')?.getRawValue() ?? ''">
+              <nz-input-group [nzAddOnBefore]="countryCode">
+                <input nz-input [inputMask]="mobileNumberMask" formControlName="mobileNo" maxlength="10"
+                  class="text-left" />
+              </nz-input-group></nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Email Id</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.emailId')?.getRawValue() ?? ''">
+              <input nz-input type="email" formControlName="emailId" (input)="emailInput($event)"
+                (ngModelChange)="checkDomain()" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Cif</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.cifId')?.getRawValue() ?? ''">
+              <nz-select formControlName="cifId" nzMode="multiple" nzPlaceHolder="Please select" nzAllowClear
+                [nzNotFoundContent]="selectData">
+                @for (option of multipleCifList; track option) {
+                <nz-option [nzLabel]="option.cifId" [nzValue]="option.cifId"></nz-option>
+                }
+                <ng-template #selectData>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please add Cif details
+                  </div>
+                </ng-template>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Account No</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.accountNo')?.getRawValue() ?? ''">
+              <nz-select formControlName="accountNo" nzMode="multiple" [nzMaxTagCount]="2" nzPlaceHolder="Please select"
+                [ngClass]="{'readonly': isUserAccReadOnly}">
+                @for (option of accNoAgainstCif; track option) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        @if(this.custType === 'Corporate'){
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>User Role</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.groupUserRole')?.getRawValue() ?? ''">
+              <nz-select formControlName="groupUserRole" nzMode="multiple" [nzMaxTagCount]="2"
+                nzPlaceHolder="Please select" [ngClass]="{'readonly': isUserFieldEnabled}">
+                <nz-option [nzLabel]="'MAKER'" [nzValue]="'MAKER'"></nz-option>
+                <nz-option [nzLabel]="'CHECKER'" [nzValue]="'CHECKER'"></nz-option>
+                <nz-option [nzLabel]="'AUTHORIZER'" [nzValue]="'AUTHORIZER'"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+        @if(this.custType === 'Corporate'){
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>From Limit</nz-form-label>
+            <nz-form-control>
+              <input nz-input [inputMask]="currencyInputMask" formControlName="fromLimit" maxlength="23" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>To Limit</nz-form-label>
+            <nz-form-control>
+              <input nz-input [inputMask]="currencyInputMask" formControlName="toLimit" maxlength="23" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Product Access</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.productAccess')?.getRawValue() ?? ''">
+              <nz-select formControlName="productAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                nzPlaceHolder="Please select">
+                @for (option of productAccessList; track $index) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Sub Product Access</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('users.subProductAccess')?.getRawValue() ?? ''">
+              <nz-select formControlName="subProductAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                nzPlaceHolder="Please select" [nzNotFoundContent]="selectsubProductData">
+                @for (option of subProductAccessList; track $index) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+                <ng-template #selectsubProductData>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please select Product Access
+                  </div>
+                </ng-template>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-control class="m-t-18">
+              <nz-space>
+                <nz-form-label *nzSpaceItem>Is Two Factor Auth Enabled</nz-form-label>
+                <nz-switch *nzSpaceItem nzSize="small"
+                  [nzDisabled]="isOverride === 0 && (isTwoFactorEnabled === 1 || isTwoFactorEnabled === 2)"
+                  formControlName="isTwoFactorEnabled"></nz-switch>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-control class="m-t-18">
+              <nz-space>
+                <nz-form-label *nzSpaceItem>Is Email</nz-form-label>
+                <nz-switch *nzSpaceItem nzSize="small"
+                  [nzDisabled]="isOverride === 0 && (isEmail === 1 || isEmail === 2)"
+                  formControlName="isEmail"></nz-switch>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-control class="m-t-18">
+              <nz-space>
+                <nz-form-label *nzSpaceItem>Is SMS</nz-form-label>
+                <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0 && (isSms === 1 || isSms === 2)"
+                  formControlName="isSms"></nz-switch>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+
+      </div>
+    </form>
+
+  </ng-template>
+</nz-modal>
+<ng-template #userFormFooter>
+  <div nz-col nzFlex="1 1 40%" class="t-19 mb-2" nz-flex nzJustify="flex-end">
+    <nz-form-item>
+      <nz-form-control>
+        <nz-space>
+          <!-- <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+            (click)="resetAddUserForm()">
+            <span nz-icon nzType="reload" nzTheme="outline"></span>
+          </button> -->
+          <button nz-button *nzSpaceItem [nz-tooltip]="editallforms ? 'Update User':'Add User'"
+            class="ant-btn-outline h-32" nzType="primary" (click)="addUser()">{{editallforms ? 'Update' : 'Add User'}}
+            <!-- <span nz-icon [nzType]="editallforms ? 'save' : 'plus-circle'" nzTheme="outline"></span> -->
+          </button>
+        </nz-space>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+</ng-template>
+
+<nz-modal [(nzVisible)]="isGroupTab" [nzWidth]="'1000px'" [nzTitle]="groupmodalTitle" [nzContent]="groupmodalContent"
+  [nzFooter]="groupmodalFooter" (nzOnCancel)="handleGroupCancel()" [nzMaskClosable]="false">
+  <ng-template #groupmodalTitle>{{editallforms ? 'Update User To Group' : 'Add User To Group'}}</ng-template>
+  <ng-template #groupmodalContent>
+    <form nz-form [formGroup]="addCustForm" nzLayout="vertical">
+      <div nz-row nzGutter="16" class="mb-1" formGroupName="groupUser">
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label [nzRequired]="isUserGroupNameRequired">Group Name</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groupUser.groupName')?.getRawValue() ?? ''">
+              <nz-select formControlName="groupName" nzMode="multiple" nzPlaceHolder="Please select"
+                [nzNotFoundContent]="selectGrpData">
+                @for (option of groupEnableList; track option) {
+                <nz-option [nzLabel]="option.groupName" [nzValue]="option.groupName"></nz-option>
+                }
+                <ng-template #selectGrpData>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please add Group Enable Details
+                  </div>
+                </ng-template>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>User ID</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groupUser.userId')?.getRawValue() ?? ''">
+              <!-- <input nz-input formControlName="userId" /> -->
+              <input nz-input placeholder="Enter Min 4 Char" minlength="4" formControlName="userId"
+                libSpecialHypeUnderscore libUpperCase (ngModelChange)="verifyUserId($event,'group')" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>First Name</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groupUser.userFName')?.getRawValue() ?? ''">
+              <input libUpperCase nz-input type="text" formControlName="userFName" libAlphanumericInput />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Last Name</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groupUser.userLName')?.getRawValue() ?? ''">
+              <input libUpperCase nz-input type="text" formControlName="userLName" libAlphanumericInput />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Mobile No</nz-form-label>
+            <nz-form-control nzErrorTip="Enter valid mobile no."
+              [title]="addCustForm.get('groupUser.mobileNo')?.getRawValue() ?? ''">
+              <nz-input-group [nzAddOnBefore]="countryCode">
+                <input nz-input [inputMask]="mobileNumberMask" formControlName="mobileNo" maxlength="10"
+                  class="text-left" />
+              </nz-input-group></nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Email Id</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groupUser.emailId')?.getRawValue() ?? ''">
+              <input nz-input type="email" formControlName="emailId" (input)="emailInput($event)"
+                (ngModelChange)="checkDomain()" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Product Access</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groupUser.productAccess')?.getRawValue() ?? ''">
+              <nz-select formControlName="productAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                nzPlaceHolder="Please select">
+                @for (option of productAccessList; track $index) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Sub Product Access</nz-form-label>
+            <nz-form-control [title]="addCustForm.get('groupUser.subProductAccess')?.getRawValue() ?? ''">
+              <nz-select formControlName="subProductAccess" nzMode="multiple" [nzMaxTagCount]="2"
+                nzPlaceHolder="Please select" [nzNotFoundContent]="selectsubProductData">
+                @for (option of subProductAccessList1; track $index) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+                <ng-template #selectsubProductData>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please select Product Access
+                  </div>
+                </ng-template>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-control class="m-t-18">
+              <nz-space>
+                <nz-form-label *nzSpaceItem>Is Two Factor Auth Enabled</nz-form-label>
+                <nz-switch *nzSpaceItem nzSize="small"
+                  [nzDisabled]="isOverride === 0  && (isTwoFactorEnabled === 1 || isTwoFactorEnabled === 2)"
+                  formControlName="isTwoFactorEnabled"></nz-switch>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 10%">
+          <nz-form-item>
+            <nz-form-control class="m-t-18">
+              <nz-space>
+                <nz-form-label *nzSpaceItem>Is Email</nz-form-label>
+                <nz-switch *nzSpaceItem nzSize="small"
+                  [nzDisabled]="isOverride === 0  && (isEmail === 1 || isEmail === 2)"
+                  formControlName="isEmail"></nz-switch>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 10%">
+          <nz-form-item>
+            <nz-form-control class="m-t-18">
+              <nz-space>
+                <nz-form-label *nzSpaceItem>Is SMS</nz-form-label>
+                <nz-switch *nzSpaceItem nzSize="small" [nzDisabled]="isOverride === 0  && (isSms === 1 || isSms === 2)"
+                  formControlName="isSms"></nz-switch>
+              </nz-space>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+
+      </div>
+    </form>
+
+
+  </ng-template>
+</nz-modal>
+<ng-template #groupmodalFooter>
+  <div nz-col nzFlex="1 1 40%" class="t-19 mb-2" nz-flex nzJustify="flex-end">
+    <nz-form-item>
+      <nz-form-control>
+        <nz-space>
+          <!-- <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+            (click)="resetAddGUserForm()">
+            <span nz-icon nzType="reload" nzTheme="outline"></span>
+          </button> -->
+          <button nz-button *nzSpaceItem [nz-tooltip]="editallforms ? 'Update User':'Add User'"
+            class="ant-btn-outline h-32" nzType="primary" (click)="addGroupUser()">{{editallforms ? 'Update' : 'Add Group User'}}
+            <!-- <span nz-icon [nzType]="editallforms ? 'save' : 'plus-circle'" nzTheme="outline"></span> -->
+          </button>
+        </nz-space>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+</ng-template>
+<nz-modal [(nzVisible)]="isruleTab" [nzWidth]="'1000px'" [nzTitle]="rulemodalTitle"
+  [nzContent]="rulemodalContent" [nzFooter]="rulemodalFooter" (nzOnCancel)="handleRuleCancel()"
+  [nzMaskClosable]="false">
+  <ng-template #rulemodalTitle>{{editallforms ? 'Update Rule' : 'Add Rule'}}</ng-template>
+  <ng-template #rulemodalContent>
+    <form nz-form [formGroup]="rulesForm" nzLayout="vertical">
+      <div nz-row nzGutter="16">
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Rule Name</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter rule">
+              <input nz-input formControlName="ruleName" placeholder="Enter Rule Name" libUpperCase
+                libAlphanumericInput />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Apply Rule On</nz-form-label>
+            <nz-form-control nzErrorTip="Please select rule apply on">
+              <nz-select formControlName="setRuleOn" nzPlaceHolder="Select">
+                <nz-option nzValue="DOMAIN" nzLabel="DOMAIN"></nz-option>
+                <nz-option nzValue="CIF" nzLabel="CIF"></nz-option>
+                <nz-option nzValue="ACCOUNT" nzLabel="ACCOUNT"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        @switch(rulesForm.get('setRuleOn')?.value){
+        @case('DOMAIN'){
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label [nzRequired]="addCustForm.get('multipleCif')?.value || custType ==='Corporate'">Domain
+              Id</nz-form-label>
+            <nz-form-control nzErrorTip="Pleasr Enter valid Domain Id">
+              <input nz-input type="text" placeholder="Enter Min 4 Char" minlength="4" formControlName="domainId"
+                libSpecialHype libUpperCase (ngModelChange)="verifyDomainId($event)" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+        @case('CIF'){
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>CIF</nz-form-label>
+            <nz-form-control nzErrorTip="Please select Cifs">
+              <nz-select formControlName="cifId" nzMode="multiple" [nzMaxTagCount]="2" nzPlaceHolder="Please select"
+                nzAllowClear [nzNotFoundContent]="selectData">
+                @if(multipleCifList.length > 0){
+                @for (option of multipleCifList; track option) {
+                <nz-option [nzLabel]="option.cifId" [nzValue]="option.cifId"></nz-option>
+                }
+                }
+                <ng-template #selectData>
+                  <div nz-typography nzType="warning" class="text-center">
+                    Please add Cif details
+                  </div>
+                </ng-template>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+        @case('ACCOUNT'){
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Accounts</nz-form-label>
+            <nz-form-control nzErrorTip="Please select accounts">
+              <nz-select formControlName="accounts" nzMode="multiple" [nzMaxTagCount]="2" nzPlaceHolder="Please select">
+                @for (option of rulesAccList; track option) {
+                <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        }
+        }
+        <div nz-col nzFlex="0 1 25%">
+          <nz-form-item>
+            <nz-form-label nzRequired>Rule Authorization</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter rule authorization"
+              [nzValidateStatus]="checkerCountControl && authorizerCountControl">
+              <nz-input-group nzCompact>
+                <input nz-input type="number" formControlName="checkerCount" placeholder="0" class="mw-25" />
+                <input nz-input value="C" disabled class="mw-15 align-center" />
+                <input nz-input value="+" disabled class="mw-15 align-center" />
+                <input nz-input type="number" formControlName="authorizerCount" placeholder="0" class="mw-25" />
+                <input nz-input value="A" disabled class="mw-15 align-center" />
+              </nz-input-group>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+      @if(rulesForm.get('checkerCount')?.value > 0 || rulesForm.get('authorizerCount')?.value > 0){
+      <div nz-row nzGutter="16">
+        @if(rulesForm.get('checkerCount')?.value > 0){
+        <div nz-col nzFlex="0 1 50%">
+          <div formArrayName="checkers">
+            <div *ngFor="let checker of checkers.controls; let i = index" [formGroupName]="i">
+              <div nz-row nzGutter="16">
+                <nz-col nzFlex="0 1 20%" nzAlign="center">
+                  <h3> Checker {{ i + 1 }} </h3>
+                </nz-col>
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>Group</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="groupList" nzMode="multiple" nzPlaceHolder="Select Groups">
+                        @for (option of checkerGroupList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>User</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="userList" nzMode="multiple" nzPlaceHolder="Select Users">
+                        @for (option of checkerUserList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+
+        @if(rulesForm.get('authorizerCount')?.value > 0){
+        <div nz-col nzFlex="0 1 50%">
+          <div formArrayName="authorizers">
+            <div *ngFor="let auth of authorizers.controls; let i = index" [formGroupName]="i">
+              <div nz-row nzGutter="16">
+                <nz-col nzFlex="0 1 20%" nzAlign="center">
+                  <h3> Authorizer {{ i + 1 }} </h3>
+                </nz-col>
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>Group</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="groupList" nzMode="multiple" nzPlaceHolder="Select Groups">
+                        @for (option of authorizerGroupList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+
+                <div nz-col nzFlex="0 1 40%">
+                  <nz-form-item>
+                    <nz-form-label>User</nz-form-label>
+                    <nz-form-control>
+                      <nz-select formControlName="userList" nzMode="multiple" nzPlaceHolder="Select Users">
+                        @for (option of authorizerUserList; track option) {
+                        <nz-option [nzLabel]="option" [nzValue]="option"></nz-option>
+                        }
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+      }
+    </form>
+  </ng-template>
+</nz-modal>
+<ng-template #rulemodalFooter>
+  <div nz-col nzFlex="0 1 20%" class="t-19 mb-2" nz-flex nzJustify="flex-end">
+    <nz-form-item>
+      <nz-form-control>
+        <nz-space>
+         <!-- <button nz-button class="ant-btn-outline" *nzSpaceItem nz-tooltip="Reset" type="button"
+            (click)="resetRules()">
+            <span nz-icon nzType="reload" nzTheme="outline"></span>
+          </button>  -->
+          <button nz-button *nzSpaceItem [nz-tooltip]="editallforms ? 'Update Rule':'Add Rule'"
+            class="ant-btn-outline h-32" nzType="primary" (click)="submitRule()">{{editallforms ? 'Update Rule' : 'Add Rule'}}
+           <!-- <span nz-icon [nzType]="editallforms ? 'save' : 'plus-circle'" nzTheme="outline"></span>-->
+          </button>
+        </nz-space>
+      </nz-form-control>
+    </nz-form-item>
+  </div>
+</ng-template>

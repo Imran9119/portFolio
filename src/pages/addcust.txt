@@ -1,0 +1,3884 @@
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { AbstractControl, FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
+import { NavigationExtras, Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { alphanumericInput, capAlpha, currencyInputMask, emailInput, LoaderService, mobileNumberMask, numberInputMask, phoneNOInputMask } from '@shared';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { DashboardService } from '../../services/dashboard/dashboard.service';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { AccountDetailsComponent } from '../account-details/account-details.component';
+import { CheckerRemarksComponent } from '../checker-remarks/checker-remarks.component';
+import { CustomerData, Rules } from '../../+state/dashboard.models';
+import { SearchCifData, selectUserRoleLocation, UserRoleLocation } from '@auth';
+import { NzTabChangeEvent } from 'ng-zorro-antd/tabs';
+
+@Component({
+  selector: 'lib-add-customer',
+  standalone: false,
+  templateUrl: './add-customer.component.html',
+  styleUrl: './add-customer.component.less',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class AddCustomerComponent implements OnInit, AfterViewInit {
+  @ViewChild('confirmTemplate', { static: true })
+  confirmTemplate!: TemplateRef<any>;
+  addCustForm!: FormGroup;
+  rulesForm !: FormGroup;
+  isAddButtonEnabled = true;
+  isAddGroupButtonEnabled = true;
+  isSearched = false;
+  isCifSearchSucess = false;
+  isEditMultipleCif = false;
+  isEditGroupEnable = false;
+  isEditAddUser = false;
+  isUserGroupNameRequired = false;
+  editedAddUserIndex: any;
+  editedMultiCifIndex: any;
+  editedGroupEnabledIndex: any;
+  selectedAccountsList: any[] = [];
+  customerId = '';
+  multipleCifList: any[] = [];
+  groupEnableList: any[] = [];
+  addUserList: any[] = [];
+  tempaddUserList: any[] = [];
+  tempaddGUserList: any[] = [];
+  tempgroupEnableList: any[] = [];
+  tempmultipleCifList: any[] = [];
+  temprulesList: any[] = [];
+  rulesList: any[] = [];
+  accNoAgainstCif: any[] = [];
+  productNames: any;
+  subProductAccessList: any[] = [];
+  subProductAccessList1: any[] = [];
+  submitInvalidControls: string[] = [];
+  productAccessList: string[] = [];
+  productType: string[] = [];
+  listOfOption = ['a10', 'c12', 'tag'];
+  isUserAccReadOnly = true;
+  isUserFieldEnabled = false;
+  isCheckerRole = false;
+  isEditMode = false;
+  checkerRemarks = '';
+  domainId = '';
+  cif = '';
+  previousData: CustomerData = {
+    addCustForm: {},
+    multipleCifList: [],
+    groupEnableList: [],
+    addUserList: [],
+    addGUserList: [],
+    rulesList: [],
+  };
+  isEditRuleEnable = false;
+  editedRuleIndex: null | number = null;
+  groupdetails: any = null;
+  custType = 'Corporate';
+  isDisableMode = false
+  editallforms = false;
+
+  alphanumericInput = alphanumericInput;
+  capAlpha = capAlpha;
+  emailInput = emailInput;
+  numberInputMask = numberInputMask;
+  mobileNumberMask = mobileNumberMask;
+  phoneNOInputMask = phoneNOInputMask;
+  currencyInputMask = currencyInputMask;
+  isNickNameResponseRecieved = true;
+  availableName = false;
+  availableName1 = false;
+  validNickName = false;
+  isDomainResponseRecieved = true;
+  availableDomain = false;
+  validDomain = false;
+  deletedList: { groupName: string[], userId: string[], cifId: string[], rules: { ruleName: string, domainId: string }[] } = { groupName: [], userId: [], cifId: [], rules: [] };
+  state: any = {};
+  countryCode = '+91';
+
+  selectedAccountDropdown: any[] = [];
+  selectAllAccounts = false;
+  activeTabIndex = 0;
+  activeUserIndex = 0;
+  isIndividualTab = false;
+  isGroupTab = false;
+  isruleTab = false
+  SelectedTabIndex = 0;
+  isEditGAddUser = false;
+  editedAddGUserIndex: any;
+  addGUserList: any[] = [];
+
+  approveCustomer = false;
+  approveUser = false;
+  approveRules = false;
+  showCustomer = false;
+  showUser = false;
+  showRules = false;
+  customerDirty = false;
+  userDirty = false;
+  rulesDirty = false;
+  checkerActionText = '';
+  approvers: any[] = [];
+  rulesAccList: any[] = [];
+  checkerUserList: string[] = [];
+  authorizerUserList: string[] = [];
+  checkerGroupList: string[] = [];
+  authorizerGroupList: string[] = [];
+  isInCheckerQueue = false;
+  isOverride: any;
+  isTwoFactorEnabled: any;
+  isEmail: any;
+  isSms: any;
+  showForm = false
+  originalEditUserData: any = null;
+  originalEditgroupUserData: any = null;
+  originalEditRuleData: any = null;
+
+
+  ngOnInit(): void {
+    this.showForm = false
+    this.getAppList();
+    this.state = history.state;
+    this.SelectedTabIndex = this.state?.selectedTabIndex || 0;
+    if (this.state && this.state.isEditMode === 'edit') {
+      this.isEditMode = this.state.isCheckerRole ? false : true;
+      this.availableName = true;
+      this.availableName1 = true;
+      this.availableDomain = true;
+      this.isInCheckerQueue = this.state.isInCheckerQueue
+      this.addUserList = this.state.addUserList || [];
+      this.tempaddUserList = this.state.addUserList || [];
+      this.groupEnableList = this.state.groupEnableList || [];
+      this.tempgroupEnableList = this.state.groupEnableList || [];
+      this.multipleCifList = this.state.multipleCifList || [];
+      this.tempmultipleCifList = this.state.multipleCifList || [];
+      this.rulesList = this.state.rulesList || [];
+      this.temprulesList = this.state.rulesList || [];
+      this.addGUserList = this.state.addGUserList || [];
+      this.tempaddGUserList = this.state.addGUserList || [];
+
+      const groupRoleMap = new Map<string, string>();
+
+      (this.groupEnableList || []).forEach((g: any) => {
+        if (g.groupName && g.groupRole) {
+          groupRoleMap.set(g.groupName.trim().toLowerCase(), g.groupRole);
+        }
+      });
+
+      this.addGUserList = (this.addGUserList || []).map((u: any) => {
+        let roles: string[] = [];
+
+        if (Array.isArray(u.groupName)) {
+          roles = u.groupName
+            .map((g: string) => groupRoleMap.get(g?.trim().toLowerCase()))
+            .filter((r: any) => !!r); // remove null/undefined
+        } else {
+          const role = groupRoleMap.get(u.groupName?.trim().toLowerCase());
+          roles = role ? [role] : [];
+        }
+
+        return {
+          ...u,
+          groupRole: roles
+        };
+      });
+
+      this.addCustForm.patchValue({
+        domainId: this.state.domainId,
+        groupEnable: this.state.isGroupEnabled === 'Yes',
+        multipleCif: this.state.isMultipleCif === 'Yes',
+      })
+      this.custType = this.state.custType || 'Corporate';
+      if (this.custType === 'Retail') {
+        this.addCustForm.get('users.groupName')?.disable();
+        // this.addCustForm.get('users.groupUserRole')?.disable();
+        this.addCustForm.get('users.fromLimit')?.disable();
+        this.addCustForm.get('users.toLimit')?.disable();
+        this.addCustForm.get('domainId')?.disable({ emitEvent: false, onlySelf: true });
+        this.addCustForm.get('domainId')?.removeValidators([Validators.required]);
+        this.addCustForm?.updateValueAndValidity()
+      } else {
+        this.addCustForm.get('domainId')?.disable({ emitEvent: false, onlySelf: true });
+        // this.addCustForm.get('domainId')?.addValidators([Validators.required]);
+        this.addCustForm.get('domainId')?.updateValueAndValidity();
+        if (this.groupEnableList.length > 0) {
+          this.addCustForm.get('rules.groupName')?.addValidators([Validators.required]);
+          this.addCustForm.updateValueAndValidity();
+        } else {
+          this.addCustForm.get('rules.groupName')?.removeValidators([Validators.required]);
+          this.addCustForm.updateValueAndValidity();
+        }
+      }
+      this.domainId = this.state.domainId;
+      this.cif = this.state.cifId;
+      this.isCheckerRole = this.state.isCheckerRole;
+      this.isDisableMode = false;
+      this.isAddGroupButtonEnabled = this.state.isGroupEnabled !== 'Yes';
+      this.previousData = {
+        addCustForm: this.addCustForm.getRawValue(),
+        multipleCifList: this.multipleCifList,
+        groupEnableList: this.groupEnableList,
+        addUserList: this.addUserList,
+        addGUserList: this.addGUserList,
+        rulesList: this.rulesList,
+      }
+      if (this.isCheckerRole) {
+        if (this.multipleCifList.some((user: any) => user.isEditable === 1) || this.groupEnableList.some((user: any) => user.isEditable === 1)) {
+          this.showCustomer = true
+        } else {
+          this.showCustomer = false
+        }
+
+        if (this.addUserList.some((user: any) => user.isEditable === 1) || this.addGUserList.some((user: any) => user.isEditable === 1)) {
+          this.showUser = true
+        } else {
+          this.showUser = false
+        }
+
+        if (this.rulesList.some((user: any) => user.isEditable === 1)) {
+          this.showRules = true
+        } else {
+          this.showRules = false
+        }
+
+      }
+
+      if (this.isInCheckerQueue) {
+        this.notification.remove();
+        this.notification.warning('Information', 'This record is present in checker queue');
+      }
+    } else {
+      this.isEditMode = false
+    }
+    this.productAccessList = this.state?.getMasterDataList?.portalNames;
+    this.productType = this.state?.getMasterDataList?.productNames;
+    this.productNames = Object.fromEntries(
+      Object.entries(this.state?.getMasterDataList?.productNames ?? {}).map(
+        ([key, value]) => [
+          key,
+          Array.isArray(value)
+            ? value.map((item: any) => `${item.productDispName} - ${key}`)
+            : []
+        ]
+      )
+    );
+
+    if (this.isCheckerRole || this.isInCheckerQueue) {
+      this.addCustForm.disable();
+    } {
+      this.onGroupEnableChange();
+    }
+    this.onValuesChanges();
+    this.rulesValueChanges();
+    this.onApproversCountChange()
+    this._cdr.detectChanges();
+    this.checkDomain();
+    if (this.custType === 'Retail') {
+      this.addCustForm.get('users.fromLimit')?.clearValidators();
+      this.addCustForm.get('users.toLimit')?.clearValidators();
+    } else {
+      this.addCustForm.get('users.fromLimit')?.setValidators([Validators.required]);
+      this.addCustForm.get('users.toLimit')?.setValidators([Validators.required]);
+    }
+
+  }
+
+  getAppList() {
+    const data = {
+      searchType: ''
+    }
+    this.service.getTwoFactorAuthDetails(data).subscribe((response: any) => {
+      if (response.data.responseStatus.status === 'success') {
+        this.isOverride = response.data.data.twoFactorAuthDetailsList[0].isOverride;
+        if (this.isOverride === 0) {
+          this.isTwoFactorEnabled = response.data.data.twoFactorAuthDetailsList[0].isTwoFactorEnabled;
+          this.isEmail = response.data.data.twoFactorAuthDetailsList[0].isEmail;
+          this.isSms = response.data.data.twoFactorAuthDetailsList[0].isSms;
+          this.addCustForm.get('users.isTwoFactorEnabled')?.disable();
+          this.addCustForm.get('users.isTwoFactorEnabled')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isTwoFactorEnabled === 1 ? true : false);
+          this.addCustForm.get('users.isEmail')?.disable();
+          this.addCustForm.get('users.isEmail')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isEmail === 1 ? true : false);
+          this.addCustForm.get('users.isSms')?.disable();
+          this.addCustForm.get('users.isSms')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isSms === 1 ? true : false);
+          this.addCustForm.get('groupUser.isTwoFactorEnabled')?.disable();
+          this.addCustForm.get('groupUser.isTwoFactorEnabled')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isTwoFactorEnabled === 1 ? true : false);
+          this.addCustForm.get('groupUser.isEmail')?.disable();
+          this.addCustForm.get('groupUser.isEmail')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isEmail === 1 ? true : false);
+          this.addCustForm.get('groupUser.isSms')?.disable();
+          this.addCustForm.get('groupUser.isSms')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isSms === 1 ? true : false);
+        } else {
+          this.addCustForm.get('users.isTwoFactorEnabled')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isTwoFactorEnabled === 1 ? true : false);
+          this.addCustForm.get('users.   ')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isEmail === 1 ? true : false);
+          this.addCustForm.get('users.isSms')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isSms === 1 ? true : false);
+          this.addCustForm.get('groupUser.isTwoFactorEnabled')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isTwoFactorEnabled === 1 ? true : false);
+          this.addCustForm.get('groupUser.isEmail')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isEmail === 1 ? true : false);
+          this.addCustForm.get('groupUser.isSms')?.setValue(response.data.data.twoFactorAuthDetailsList[0].isSms === 1 ? true : false);
+        }
+      } else {
+        this.notification.error('Error', response.responseStatus.message);
+      }
+    })
+  }
+
+  onCardClick(tabIndex: number): void {
+    this.activeTabIndex = tabIndex;
+  }
+
+  editForm() {
+    this.isDisableMode = false;
+    this.addCustForm?.enable({ onlySelf: true, emitEvent: false });
+    this.addCustForm?.get('domainId')?.disable({ onlySelf: true, emitEvent: false });
+    this.addCustForm?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+  }
+
+  changeTab(e: NzTabChangeEvent[]) {
+    this.showForm = false;
+    this.isEditRuleEnable = false
+    this.isEditGroupEnable = false;
+    this.isEditAddUser = false;
+    this.isEditGAddUser = false;
+    if (this.activeTabIndex === 1 || this.activeTabIndex === 2) {
+      const allowChange = this.multipleCifList.length > 0;
+      if (!allowChange) {
+        this.notification.remove()
+        this.notification.warning('Alert', 'Please add CIF.')
+        setTimeout(() => {
+          this.activeTabIndex = 0;
+        });
+        this.SelectedTabIndex = 0;
+      } else {
+        this.SelectedTabIndex = this.activeTabIndex
+      }
+      this.rulesForm.reset();
+      this.rulesForm.get('domainId')?.patchValue(this.addCustForm.get('domainId')?.value);
+      this.rulesForm.updateValueAndValidity();
+      this.checkerUserList = [];
+      this.authorizerUserList = [];
+      this.checkerGroupList = [];
+      this.authorizerGroupList = [];
+    } else {
+      this.SelectedTabIndex = this.activeTabIndex
+    }
+
+
+    if (this.isEditMode || this.isCheckerRole) {
+      this.isDisableMode = false;
+      // this.addCustForm?.disable({ onlySelf: true, emitEvent: false });
+      // this.addCustForm?.get('domainId')?.disable({ onlySelf: true, emitEvent: false });
+      this.addCustForm?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+    }
+  }
+
+  resetForm() {
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: 'Changes will be lost. Please Confirm.',
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        switch (this.SelectedTabIndex) {
+          case 0:
+            this.multipleCifList = this.previousData.multipleCifList;
+            this.groupEnableList = this.previousData.groupEnableList;
+            this.deletedList.cifId = [];
+            this.deletedList.groupName = [];
+
+            break;
+
+          case 1:
+            this.addGUserList = this.previousData.addGUserList;
+            this.addUserList = this.previousData.addUserList;
+            this.deletedList.userId = []
+            this.addCustForm.get('users')?.reset();
+            this.addCustForm.get('groupUser')?.reset();
+            break;
+
+          case 2:
+            this.rulesList = this.previousData.rulesList;
+            this.deletedList.rules = []
+            this.rulesForm.reset();
+            break;
+        }
+
+        if (this.isEditMode && !this.isCheckerRole) {
+          this.isDisableMode = false;
+        }
+        // this.addCustForm?.disable({ onlySelf: true, emitEvent: false });
+        this.addCustForm?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+        this.showForm = false;
+        this.isEditAddUser = false;
+        this.isEditGAddUser = false;
+        this.isEditRuleEnable = false;
+        this.isEditGroupEnable = false;
+        this._cdr.detectChanges();
+      },
+      nzCancelText: 'No',
+    });
+  }
+
+  onValuesChanges() {
+    this.addCustForm.get('groupEnable')?.valueChanges.subscribe((res: boolean) => {
+      if (this.groupEnableList && this.groupEnableList.length > 0) {
+        this.addCustForm.get('groupEnable')?.patchValue(true, { emitEvent: false, onlySelf: true });
+        this.notification.remove();
+        this.modal.closeAll();
+        this.modal.warning({
+          nzTitle: 'Confirm',
+          nzContent: 'Changes will be lost. Please Confirm.',
+          nzOkText: 'Yes',
+          nzClosable: false,
+          nzOkType: 'primary',
+          nzOnOk: () => {
+            this.groupEnableList = [];
+            this.addCustForm.get('groupEnable')?.patchValue(false, { emitEvent: false, onlySelf: true });
+            this.addCustForm.get('users')?.patchValue({
+              groupName: '',
+              fromLimit: '',
+              toLimit: '',
+              groupUserRole: []
+            })
+            this.addCustForm.get('users.groupName')?.reset({ emitEvent: false, onlySelf: true })
+            this.isAddGroupButtonEnabled = true;
+            this.isUserGroupNameRequired = false;
+            this.addCustForm.get('users.groupName')?.clearValidators();
+            this.addCustForm.get('users.groupUserRole')?.enable();
+            // this.addCustForm.get('users.fromLimit')?.enable();
+            // this.addCustForm.get('users.toLimit')?.enable();
+            this.isUserFieldEnabled = false;
+            this.addCustForm.get('users')?.updateValueAndValidity();
+          },
+          nzCancelText: 'No',
+        });
+      }
+      // else {
+      this.onGroupEnableChange();
+      // }
+    });
+    this.addCustForm.get('multipleCif')?.valueChanges.subscribe((res: boolean) => {
+      if (this.multipleCifList && this.multipleCifList.length > 1) {
+        this.notification.remove();
+        this.notification.warning('Alert', 'If you want to change the multiple CIFs to No, the list must contain only one record; adding more than one record is not permitted.');
+        this.addCustForm.get('multipleCif')?.patchValue(true, { emitEvent: false, onlySelf: true });
+      } else {
+        if (res) {
+          this.isAddButtonEnabled = false;
+          if (this.custType === 'Retail' && this.multipleCifList.length > 0) {
+            this.notification.remove();
+            this.modal.closeAll();
+            this.modal.confirm({
+              nzTitle: 'Confirm',
+              nzContent: 'For retail customer types, multiple CIFs are not allowed. Please continue to proceed. CIF data & User data will be lost.',
+              nzOkText: 'Yes',
+              nzOkType: 'primary',
+              nzOnOk: () => {
+                this.addCustForm.get('domainId')?.reset('', { emitEvent: false, onlySelf: true });
+                this.addCustForm.get('domainId')?.disable({ emitEvent: false, onlySelf: true });
+                this.addCustForm.get('domainId')?.removeValidators([Validators.required]);
+                this.multipleCifList = [];
+                this.addUserList = [];
+                this.groupEnableList = [];
+                this.rulesList = [];
+                this.custType = 'Corporate'
+                this._cdr.detectChanges();
+              },
+              nzCancelText: 'No',
+              nzOnCancel: () => {
+                this.addCustForm.get('multipleCif')?.patchValue(false, { emitEvent: false, onlySelf: true });
+              }
+            });
+
+          } else {
+            // if (!this.isEditMode) {
+            //   this.addCustForm.get('domainId')?.enable({ emitEvent: false, onlySelf: true });
+            //   this.addCustForm.get('domainId')?.addValidators([Validators.required]);
+            // }
+          }
+
+        } else {
+          this.isAddButtonEnabled = true;
+          if (this.custType === 'Retail') {
+            this.addCustForm.get('domainId')?.reset('', { emitEvent: false, onlySelf: true });
+            this.addCustForm.get('domainId')?.disable({ emitEvent: false, onlySelf: true });
+            this.addCustForm.get('domainId')?.removeValidators([Validators.required]);
+            this.addCustForm.get('domainId')?.clearValidators();
+          } else {
+            if (!this.isEditMode) {
+              this.addCustForm.get('domainId')?.addValidators([Validators.required]);
+            }
+          }
+        }
+        this.addCustForm.get('domainId')?.updateValueAndValidity();
+      }
+    });
+    this.addCustForm.get('users.cifId')?.valueChanges.subscribe((cif: any) => {
+      if (cif) {
+        this.accNoAgainstCif = [];
+        this.isUserAccReadOnly = false;
+        this.multipleCifList.forEach((res) => {
+          if (cif?.includes(res.cifId)) {
+            this.accNoAgainstCif = [
+              ...this.accNoAgainstCif,
+              ...res.selectedAccountsList
+            ];
+          }
+        })
+        this.addCustForm.get('users.accountNo')?.patchValue(this.accNoAgainstCif);
+      } else {
+        this.accNoAgainstCif = [];
+        this.isUserAccReadOnly = true;
+        this.addCustForm.get('users.accountNo')?.reset([], { emitEvent: false, onlySelf: true });
+      }
+    });
+    // this.addCustForm.get('users.groupName')?.valueChanges.subscribe((user: any) => {
+    //   if (user && user.length > 0) {
+    //     // this.addCustForm.get('users.fromLimit')?.disable();
+    //     // this.addCustForm.get('users.toLimit')?.disable();
+    //     // this.addCustForm.get('users.groupUserRole')?.disable();
+    //     this.isUserFieldEnabled = true;
+    //     if (this.addCustForm.get('groupEnable')?.value) {
+    //       this.groupEnableList.forEach((res: any) => {
+    //         if (res.groupName == user) {
+    //           this.addCustForm.get('users')?.patchValue({
+    //             fromLimit: res.fromLimit,
+    //             toLimit: res.toLimit,
+    //             groupUserRole: res.groupRole
+    //           })
+    //         }
+    //       })
+    //     }
+    //   } else {
+    //     // this.addCustForm.get('users.fromLimit')?.enable();
+    //     // this.addCustForm.get('users.toLimit')?.enable();
+    //     // this.addCustForm.get('users.groupUserRole')?.enable();
+    //     this.isUserFieldEnabled = false;
+    //     this.addCustForm.get('users.fromLimit')?.patchValue('', { emitEvent: false, onlySelf: true });
+    //     this.addCustForm.get('users.toLimit')?.patchValue('', { emitEvent: false, onlySelf: true });
+    //     this.addCustForm.get('users.groupUserRole')?.patchValue([], { emitEvent: false, onlySelf: true });
+    //   }
+    // });
+    this.addCustForm.get('users.productAccess')?.valueChanges.subscribe((user: any) => {
+      if (user == 'TRADEFINANCE') {
+        this.subProductAccessList = this.productNames['TRADEFINANCE'];
+      } else if (user?.length == 2) {
+        this.subProductAccessList = [...this.productNames['TRADEFINANCE'], ...this.productNames['IEDPMS']];
+      } else if (user == 'IEDPMS') {
+        this.subProductAccessList = this.productNames['IEDPMS'];
+      } else {
+        this.subProductAccessList = [];
+      }
+    })
+
+    this.addCustForm.get('groupUser.productAccess')?.valueChanges.subscribe((user: any) => {
+      if (user == 'TRADEFINANCE') {
+        this.subProductAccessList1 = this.productNames['TRADEFINANCE'];
+      } else if (user?.length == 2) {
+        this.subProductAccessList1 = [...this.productNames['TRADEFINANCE'], ...this.productNames['IEDPMS']];
+      } else if (user == 'IEDPMS') {
+        this.subProductAccessList1 = this.productNames['IEDPMS'];
+      } else {
+        this.subProductAccessList1 = [];
+      }
+    })
+
+    this.addCustForm.get('groups.cifId')?.valueChanges.subscribe((cifs: string[]) => {
+      if (cifs && cifs.length > 0) {
+        const accounts = this.multipleCifList
+          .filter((item: any) => cifs.includes(item.cifId))
+          .flatMap((item: any) => item.selectedAccountsList || []);
+
+        this.selectedAccountDropdown = [...new Set(accounts)];
+      } else {
+        this.selectedAccountDropdown = []
+      }
+      if (this.addCustForm.get('groups.selectedAccounts')?.value?.length >= 0) {
+        this.addCustForm.get('groups.selectedAccounts')?.patchValue([...this.selectedAccountDropdown])
+      }
+      // this.selectedAccounts = this.selectedAccountDropdown
+    })
+
+    // const control = this.addCustForm.get('users.mobileNo');
+
+    // this.addCustForm.get('users.mobileNo')?.valueChanges.subscribe(value => {
+    //   if (value && !value.startsWith(this.countryCode)) {
+    //     control?.patchValue(this.countryCode + value.replace(this.countryCode, ''), { emitEvent: false });
+    //   }
+    // });
+    // control?.patchValue(this.countryCode, { emitEvent: false });
+  }
+
+  rulesValueChanges() {
+    this.addCustForm.get('rules.groupName')?.valueChanges.subscribe((groupNames: string[]) => {
+      if (groupNames?.length) {
+
+        const selectedGroups = this.groupEnableList.filter((group: any) =>
+          groupNames.includes(group.groupName)
+        );
+
+        const uniqueRoles = [...new Set(selectedGroups.flatMap((g: any) => g.groupRole))];
+
+        if (!uniqueRoles.includes('CHECKER')) {
+          this.addCustForm.get('rules.checkerCount')?.setValue('0', { emitEvent: false, onlySelf: true });
+          this.addCustForm.get('rules.checkerCount')?.disable({ emitEvent: false, onlySelf: true });
+        } else {
+          this.addCustForm.get('rules.checkerCount')?.enable({ emitEvent: false, onlySelf: true });
+        }
+
+        if (!uniqueRoles.includes('AUTHORIZER')) {
+          this.addCustForm.get('rules.authorizerCount')?.setValue('0', { emitEvent: false, onlySelf: true });
+          this.addCustForm.get('rules.authorizerCount')?.disable({ emitEvent: false, onlySelf: true });
+        } else {
+          this.addCustForm.get('rules.authorizerCount')?.enable({ emitEvent: false, onlySelf: true });
+        }
+
+        this.addCustForm.get('rules')?.updateValueAndValidity();
+
+      } else {
+        this.groupdetails = null;
+      }
+    });
+
+    // this.addCustForm.get('rules.groupName')?.valueChanges.subscribe((groupName: any) => {
+    //   if (groupName) {
+    //     this.groupdetails = this.groupEnableList.find((group: any) => group.groupName === groupName);
+    //     const uniqueRoles = this.groupdetails.groupRole;
+    //     if (!uniqueRoles.includes('CHECKER')) {
+    //       this.addCustForm.get('rules.checkerCount')?.setValue('0', { emitEvent: false, onlySelf: true });
+    //       this.addCustForm.get('rules.checkerCount')?.disable({ emitEvent: false, onlySelf: true });
+    //     } else {
+    //       this.addCustForm.get('rules.checkerCount')?.enable({ emitEvent: false, onlySelf: true });
+    //     }
+    //     if (!uniqueRoles.includes('AUTHORIZER')) {
+    //       this.addCustForm.get('rules.authorizerCount')?.setValue('0', { emitEvent: false, onlySelf: true });
+    //       this.addCustForm.get('rules.authorizerCount')?.disable({ emitEvent: false, onlySelf: true });
+    //     } else {
+    //       this.addCustForm.get('rules.authorizerCount')?.enable({ emitEvent: false, onlySelf: true });
+    //     }
+    //     this.addCustForm.get('rules')?.updateValueAndValidity();
+    //   } else {
+    //     this.groupdetails = null;
+    //   }
+    // });
+
+
+
+    // this.addCustForm.get('rules.fromLimit')?.valueChanges.subscribe((fromLimit: any) => {
+    //   if (fromLimit) {
+    //     if (groupdetails) {
+    //       if (parseFloat(fromLimit) < parseFloat(groupdetails.fromLimit)) {
+    //         this.addCustForm.get('rules.fromLimit')?.patchValue(0, { emitEvent: false, onlySelf: true });
+    //         this.addCustForm.get('rules.fromLimit')?.setErrors({ 'min': true });
+    //         this.notification.remove();
+    //         this.notification.warning('Alert', 'From Limit cannot be less than group From Limit.');
+    //         return;
+    //       } else {
+    //         this.addCustForm.get('rules.fromLimit')?.setErrors(null);
+    //       }
+    //     }
+    //     if (parseFloat(fromLimit) > parseFloat(this.addCustForm.get('rules.toLimit')?.value)) {
+    //       this.addCustForm.get('rules.fromLimit')?.patchValue(0, { emitEvent: false, onlySelf: true });
+    //       this.addCustForm.get('rules.fromLimit')?.setErrors({ 'max': true });
+    //       this.notification.remove();
+    //       this.notification.warning('Alert', 'From Limit cannot be greater than To Limit.');
+    //       return;
+    //     } else {
+    //       this.addCustForm.get('rules.fromLimit')?.setErrors(null);
+    //     }
+    //   }
+    // });
+    // this.addCustForm.get('rules.toLimit')?.valueChanges.subscribe((toLimit: any) => {
+    //   if (toLimit) {
+    //     if (groupdetails) {
+    //       if (parseFloat(toLimit) > parseFloat(groupdetails.toLimit)) {
+    //         this.addCustForm.get('rules.toLimit')?.patchValue(0, { emitEvent: false, onlySelf: true });
+    //         this.addCustForm.get('rules.toLimit')?.setErrors({ 'max': true });
+    //         this.notification.remove();
+    //         this.notification.warning('Alert', 'To Limit cannot be greater than group To Limit.');
+    //         return;
+    //       } else {
+    //         this.addCustForm.get('rules.toLimit')?.setErrors(null);
+    //       }
+    //     }
+    //     if (parseFloat(toLimit) < parseFloat(this.addCustForm.get('rules.fromLimit')?.value)) {
+    //       this.addCustForm.get('rules.toLimit')?.patchValue(0, { emitEvent: false, onlySelf: true });
+    //       this.addCustForm.get('rules.toLimit')?.setErrors({ 'min': true });
+    //       this.notification.remove();
+    //       this.notification.warning('Alert', 'To Limit cannot be less than From Limit.');
+    //       return;
+    //     } else {
+    //       this.addCustForm.get('rules.toLimit')?.setErrors(null);
+    //     }
+
+    //   }
+    // });
+  }
+
+  onFromLimitBlur(groupdetails: any): void {
+    const fromCtrl = this.addCustForm.get('rules.fromLimit');
+    const toCtrl = this.addCustForm.get('rules.toLimit');
+
+    if (!fromCtrl?.value) {
+      return;
+    }
+
+    const fromLimit = parseFloat(fromCtrl.value);
+    const toLimit = parseFloat(toCtrl?.value);
+    const groupFrom = parseFloat(groupdetails?.fromLimit);
+    const groupTo = parseFloat(groupdetails?.toLimit);
+
+    if (groupdetails && fromLimit < groupFrom) {
+      fromCtrl.patchValue(0, { emitEvent: false, onlySelf: true });
+      fromCtrl.setErrors({ min: true });
+      this.notification.remove();
+      this.notification.warning('Alert', 'From Limit cannot be less than group From Limit.');
+      return;
+    }
+
+    if (groupdetails && fromLimit > groupTo) {
+      fromCtrl.patchValue(0, { emitEvent: false, onlySelf: true });
+      fromCtrl.setErrors({ min: true });
+      this.notification.remove();
+      this.notification.warning('Alert', 'From Limit cannot be greater than group To Limit.');
+      return;
+    }
+
+    if (toCtrl?.value && fromLimit > toLimit) {
+      fromCtrl.patchValue(0, { emitEvent: false, onlySelf: true });
+      fromCtrl.setErrors({ max: true });
+      this.notification.remove();
+      this.notification.warning('Alert', 'From Limit cannot be greater than To Limit.');
+      return;
+    }
+
+    fromCtrl.setErrors(null);
+  }
+
+  onToLimitBlur(groupdetails: any): void {
+    const toCtrl = this.addCustForm.get('rules.toLimit');
+    const fromCtrl = this.addCustForm.get('rules.fromLimit');
+
+    if (!toCtrl?.value) {
+      return;
+    }
+
+    const toLimit = parseFloat(toCtrl.value);
+    const fromLimit = parseFloat(fromCtrl?.value);
+    const groupTo = parseFloat(groupdetails?.toLimit);
+    const groupFrom = parseFloat(groupdetails?.fromLimit);
+
+    if (groupdetails && toLimit > groupTo) {
+      toCtrl.patchValue(0, { emitEvent: false, onlySelf: true });
+      toCtrl.setErrors({ max: true });
+      this.notification.remove();
+      this.notification.warning('Alert', 'To Limit cannot be greater than group To Limit.');
+      return;
+    }
+
+    if (groupdetails && fromLimit < groupFrom) {
+      toCtrl?.patchValue(0, { emitEvent: false, onlySelf: true });
+      toCtrl?.setErrors({ min: true });
+      this.notification.remove();
+      this.notification.warning('Alert', 'To Limit cannot be less than group From Limit.');
+      return;
+    }
+
+    if (fromCtrl?.value && toLimit < fromLimit) {
+      toCtrl.patchValue(0, { emitEvent: false, onlySelf: true });
+      toCtrl.setErrors({ min: true });
+      this.notification.remove();
+      this.notification.warning('Alert', 'To Limit cannot be less than From Limit.');
+      return;
+    }
+
+    if (fromCtrl?.value && toLimit === fromLimit) {
+      toCtrl.patchValue(0, { emitEvent: false, onlySelf: true });
+      toCtrl.setErrors({ min: true });
+      this.notification.remove();
+      this.notification.warning('Alert', 'To Limit cannot be same as From Limit.');
+      return;
+    }
+
+    toCtrl.setErrors(null);
+  }
+
+  onGroupEnableChange() {
+    if (this.addCustForm.get('groupEnable')?.value) {
+      this.isAddGroupButtonEnabled = false;
+      this.isUserGroupNameRequired = true;
+      this.addCustForm.get('users.groupName')?.addValidators([Validators.required]);
+      this.addCustForm.get('users.groupName')?.enable();
+      // this.addCustForm.get('users.groupUserRole')?.disable();
+      // this.addCustForm.get('users.fromLimit')?.disable();
+      // this.addCustForm.get('users.toLimit')?.disable();
+      // this.isUserFieldEnabled = true;
+    } else {
+      this.isAddGroupButtonEnabled = true;
+      this.isUserGroupNameRequired = false;
+      this.addCustForm.get('users.groupName')?.clearValidators();
+      this.addCustForm.get('users.groupName')?.disable();
+      // this.addCustForm.get('users.groupUserRole')?.enable();
+      // this.addCustForm.get('users.fromLimit')?.enable();
+      // this.addCustForm.get('users.toLimit')?.enable();
+      this.isUserFieldEnabled = false;
+    }
+    this.addCustForm.get('users')?.updateValueAndValidity();
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.loaderService.hide();
+    }, 1000);
+  }
+
+  onBack(): void {
+    const extraPayload: NavigationExtras = {
+      state: {
+        activeTabIndex: this.state?.activeTabIndex ?? '',
+        activeType: this.state?.activeType ?? '',
+        showDetailedDashboard: this.state?.showDetailedDashboard ?? false,
+      }
+    }
+    // this.router.navigate(['/customer-master/addCustomer']);
+    this.router.navigate([this.state.currentRoute], extraPayload)
+  }
+
+  searchCifData(cifId: string, actionType: string) {
+    if (this.addCustForm.get('cifs')?.invalid && !this.isEditMultipleCif) {
+      this.addCustForm.get('cifs.cifId')?.markAsDirty();
+      this.addCustForm.get('cifs.cifId')?.updateValueAndValidity();
+      this.notification.remove();
+      this.notification.warning('Alert', 'Please Enter Cif.');
+      return;
+    }
+    let isDuplicate = false;
+    this.multipleCifList.forEach((res: any) => {
+      if (res.cifId == this.addCustForm.get('cifs.cifId')?.value) {
+        isDuplicate = true
+      }
+    })
+    if (isDuplicate) {
+      this.notification.remove();
+      this.notification.warning('Alert', 'Duplicate Cif is not allowed to be added.');
+      return;
+    } else if (!this.addCustForm.get('multipleCif')?.value && this.multipleCifList.length == 1 && !this.isEditMultipleCif) {
+      this.notification.remove();
+      this.notification.warning('Alert', 'Please Enable multiple Cif.');
+      return;
+    }
+    this.isSearched = true;
+    let listOfUserRoleLocation: UserRoleLocation[] = []
+    this.store.select(selectUserRoleLocation).subscribe((res: UserRoleLocation[]) => {
+      if (res) {
+        listOfUserRoleLocation = res;
+      }
+    })
+    const payload: SearchCifData = {
+      cifId: cifId,
+      actionType: actionType
+    };
+    if (actionType === 'add') {
+      payload.listOfUserRoleLocation = listOfUserRoleLocation
+    }
+
+    this.service.getAccDtls(payload).subscribe((res: any) => {
+      if (res.data.responseStatus.status === 'success') {
+        const custInfoObj = res.data.data.custInfoObj;
+        this.customerId = res.data.data.cif;
+        this.custType = res.data.data.custType;
+        if (this.custType === 'Retail') {
+          this.addCustForm.get('users.groupName')?.disable();
+          // this.addCustForm.get('users.groupUserRole')?.disable();
+          this.addCustForm.get('users.fromLimit')?.disable();
+          this.addCustForm.get('users.toLimit')?.disable();
+          this.addCustForm.get('domainId')?.disable({ emitEvent: false, onlySelf: true });
+          this.addCustForm.get('domainId')?.removeValidators([Validators.required]);
+          if (this.addCustForm.get('multipleCif')?.value) {
+            this.isCifSearchSucess = false;
+            this.notification.remove();
+            this.notification.warning('Alert', 'Multiple CIFs with Retail Customer Type cannot be added.');
+          } else {
+            this.groupEnableList = [];
+            this.rulesList = [];
+            this.isCifSearchSucess = true;
+          }
+        } else {
+          this.isCifSearchSucess = true;
+          this.addCustForm.get('users.groupName')?.enable();
+          this.addCustForm.get('users.groupUserRole')?.enable();
+          this.addCustForm.get('users.fromLimit')?.enable();
+          this.addCustForm.get('users.toLimit')?.enable();
+          if (!this.isEditMode) {
+            this.addCustForm.get('domainId')?.enable({ emitEvent: false, onlySelf: true });
+            this.addCustForm.get('domainId')?.addValidators([Validators.required]);
+          }
+        }
+
+        if (this.isCifSearchSucess) {
+          this.addCustForm.get('cifs')?.patchValue({
+            custName: custInfoObj?.customerName?.toUpperCase(),
+            corporateId: custInfoObj?.corpId,
+            ieCode: custInfoObj?.ieCode,
+          });
+          this.accDtlsModal(res?.data?.data);
+        }
+        this.addCustForm?.updateValueAndValidity();
+      } else {
+        this.isCifSearchSucess = false;
+        this.notification.remove();
+        this.notification.warning('Alert', res.data.responseStatus.message);
+      }
+    });
+  }
+
+  accDtlsModal(accountDrlsList: any) {
+    this.notification.remove();
+    this.modal.closeAll();
+    const modalRef = this.modal.create({
+      nzContent: AccountDetailsComponent,
+      nzTitle: 'Account Details',
+      nzOkText: this.isEditMultipleCif ? 'Save & Update' : 'Save & Add',
+      nzOnOk: () => {
+        this.selectedAccountsList = [];
+        const instance = modalRef.getContentComponent() as AccountDetailsComponent;
+        const selectedRecords = instance.getSelectedRecords();
+        if (selectedRecords && selectedRecords.length == 0) {
+          this.notification.remove();
+          this.notification.warning('Alert', 'Please select atleast one Account No.');
+          return false;
+        } else {
+          // const exists = this.multipleCifList?.some(r => r.cifId === this.addCustForm.get('cifs.cifId')?.value);
+          // if (exists) {
+          //   this.notification.warning('Alert', 'Duplicate records are not allowed to be added.')
+          //   this.addCustForm.get('cifs.cifId')?.reset('',{emitEvent:false, onlySelf:true});
+          // }else{
+          selectedRecords.forEach((record) => {
+            // if (!this.selectedAccountsList.includes(record.accountNum)) {
+            this.selectedAccountsList.push(record.accountNum);
+            // }
+          });
+          this.addMultiCifs();
+          // }
+          return true;
+        }
+      },
+      nzCancelText: 'Cancel',
+      nzOnCancel: () => {
+        this.selectedAccountsList = [];
+        this.isEditMultipleCif = false;
+        this.editedMultiCifIndex = null;
+      },
+      nzWidth: '70%',
+      nzMaskClosable: false,
+      nzClosable: false,
+    });
+    modalRef.componentInstance!.accountDetailsList = accountDrlsList?.accountDetailsList;
+    modalRef.componentInstance!.selectedAccountsList = this.selectedAccountsList;
+    modalRef.componentInstance!.custInfoObj = accountDrlsList?.custInfoObj;
+    modalRef.componentInstance!.cifId = accountDrlsList?.cif;
+
+  }
+
+  addMultiCifs() {
+    this.notification.remove();
+    const cifsGroup = this.addCustForm.get('cifs') as FormGroup;
+    if (this.isCifSearchSucess) {
+      // if (this.addCustForm.get('cifs')?.valid) {
+      const cifPayload = {
+        cifId: (cifsGroup.get('cifId')?.value == '' || cifsGroup.get('cifId')?.value == null || cifsGroup.get('cifId')?.value == undefined) ? this.customerId : cifsGroup.get('cifId')?.value,
+        custName: cifsGroup.get('custName')?.value,
+        corporateId: cifsGroup.get('corporateId')?.value,
+        ieCode: cifsGroup.get('ieCode')?.value,
+        selectedAccountsList: this.selectedAccountsList
+      };
+      if (this.isEditMultipleCif && this.editedMultiCifIndex !== null) {
+        const updatedList = [...this.multipleCifList];
+        updatedList[this.editedMultiCifIndex] = cifPayload;
+        this.multipleCifList = updatedList;
+        this.notification.remove();
+        this.notification.success('Success', 'CIF details updated successfully.');
+      } else {
+        const exists = this.multipleCifList?.some(r => r.cifId === cifPayload.cifId);
+        if (exists) {
+          this.notification.remove();
+          this.notification.warning('Alert', 'Duplicate records are not allowed to be added.')
+          return;
+        }
+        this.multipleCifList = [...this.multipleCifList, cifPayload];
+        this.notification.remove();
+        this.notification.success('Success', 'CIF added successfully.');
+      }
+      this.selectedAccountsList = [];
+      this.isCifSearchSucess = false;
+      this.resetMultiCifForm();
+      // } else {
+      //   Object.values(cifsGroup.controls).forEach(control => {
+      //     if (control.invalid) {
+      //       control.markAsDirty();
+      //       control.updateValueAndValidity({ onlySelf: true });
+      //     }
+      //   });
+      // }
+    } else {
+      this.notification.remove();
+      this.notification.warning('Alert', 'You must first search the CIF, after which it can be added.');
+    }
+  }
+
+  editMultiCif(data: any, i: number) {
+    this.isEditMultipleCif = true;
+    this.editedMultiCifIndex = i;
+    this.selectedAccountsList = data.selectedAccountsList;
+    this.customerId = data.cifId;
+  }
+
+  deleteMultiCif(data: any) {
+    this.notification.remove();
+    if (this.addUserList && this.addUserList.length > 0) {
+      this.addUserList.forEach((res: any) => {
+        if (res.cifId.includes(data.cifId)) {
+          this.notification.remove();
+          this.notification.warning('Alert', 'This CIF ID is mapped to a user. Please delete the user first to delete this CIF ID.')
+        }
+      })
+    } else {
+      this.selectedAccountsList = [];
+      this.notification.remove();
+      this.modal.closeAll();
+      this.modal.warning({
+        nzTitle: 'Confirm',
+        nzContent: 'Please confirm that you want to delete this CIF',
+        nzOkText: 'Yes',
+        nzClosable: false,
+        nzOkType: 'primary',
+        nzOnOk: () => {
+          if (this.isEditMode) {
+            if (this.previousData?.multipleCifList?.some(
+              (item: any) => item.cifId === data.cifId
+            )) {
+              this.deletedList = {
+                ...this.deletedList,
+                cifId: [...this.deletedList.cifId, data.cifId]
+              }
+              // this.service.removetheCustomerDetails({ cifId: data.cifId }).subscribe((res: any) => {
+              //   if (res.data.responseStatus.status === 'success') {
+              //     this.multipleCifList = this.multipleCifList.filter((rec) => rec.cifId !== data.cifId);
+              //   } else {
+              //      this.notification.remove();
+              //     this.notification.warning('Alert', res.data.responseStatus.message);
+              //   }
+              // })
+            }
+          }
+          this.multipleCifList = this.multipleCifList.filter((rec) => rec.cifId !== data.cifId);
+          this._cdr.detectChanges();
+          this.notification.remove();
+          this.notification.success('Success', 'CIF deleted successfully.');
+        },
+        nzCancelText: 'No',
+      })
+
+    }
+  }
+
+  resetMultiCifForm() {
+    this.isEditMultipleCif = false;
+    this.editedMultiCifIndex = null;
+    this.addCustForm.get('cifs')?.reset({ emitEvent: false, onlySelf: true });
+  }
+
+  addGroupEnable() {
+    const groupEnable = this.addCustForm.get('groups') as FormGroup;
+
+    if (groupEnable?.valid) {
+      if (parseFloat(groupEnable?.get('fromLimit')?.value) > parseFloat(groupEnable?.get('toLimit')?.value)) {
+        this.notification.remove();
+        this.notification.warning('Alert', 'To Limit cannot be less than From Limit.');
+        return;
+      }
+
+      if (parseFloat(groupEnable?.get('fromLimit')?.value) === parseFloat(groupEnable?.get('toLimit')?.value)) {
+        this.notification.remove();
+        this.notification.warning('Alert', 'To Limit cannot be same as From Limit.');
+        return;
+      }
+
+      const cifPayload = {
+        groupName: groupEnable.get('groupName')?.value,
+        groupRole: groupEnable.get('groupRole')?.value,
+        cifId: groupEnable.get('cifId')?.value,
+        groupDescription: groupEnable.get('groupDescription')?.value,
+        fromLimit: groupEnable.get('fromLimit')?.value,
+        toLimit: groupEnable.get('toLimit')?.value,
+        selectedAccounts: groupEnable.get('selectedAccounts')?.value
+      };
+      if (this.isEditGroupEnable && this.editedGroupEnabledIndex !== null) {
+        const updatedList = [...this.groupEnableList];
+        updatedList[this.editedGroupEnabledIndex] = { ...cifPayload, isEnabled: this.groupEnableList[this.editedGroupEnabledIndex].isEnabled };
+        this.groupEnableList = updatedList;
+      } else {
+        const exists = this.groupEnableList?.some(r => r.groupName === cifPayload.groupName);
+        if (exists) {
+          this.notification.remove();
+          this.notification.warning('Alert', 'Duplicate records are not allowed to be added.');
+          return;
+        }
+        this.groupEnableList = [...this.groupEnableList, { ...cifPayload, isEnabled: true }];
+      }
+      this.resetGroupEnableForm();
+      this.addCustForm.get('groups.groupName')?.enable();
+      this.addCustForm.get('rules.groupName')?.addValidators([Validators.required]);
+      this.addCustForm.updateValueAndValidity();
+    } else {
+      Object.values(groupEnable.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+      this.notification.remove();
+      this.notification.warning('Alert', 'Please fill all mandatory data.');
+    }
+  }
+
+  editGroupEnable(data: any, i: number) {
+    this.isEditGroupEnable = true;
+    this.editedGroupEnabledIndex = i;
+    this.addCustForm.get('groups')?.patchValue({
+      groupName: data.groupName,
+      groupRole: data.groupRole,
+      groupDescription: data.groupDescription,
+      cifId: data.cifId,
+      fromLimit: data.fromLimit,
+      toLimit: data.toLimit,
+      selectedAccounts: data.selectedAccounts,
+    });
+    if (this.isEditMode && this.previousData.groupEnableList.some(item => item.groupName === data.groupName)) {
+      this.addCustForm.get('groups.groupName')?.disable();
+    }
+  }
+
+  disableGroup(data: any, i: number) {
+    const action = data.isEnabled ? 'Disable' : 'Enable'
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: `Please confirm that you want to ${action} this User`,
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        this.groupEnableList = this.groupEnableList.map((item: any, index: number) => {
+          const result = item.isEnabled === undefined ? true : !item.isEnabled;
+          if (i === index) {
+            return { ...item, isEnabled: result };
+          }
+          return item;
+        })
+        this._cdr.detectChanges();
+      },
+      nzCancelText: 'No',
+    })
+    this._cdr.detectChanges();
+  }
+
+  deleteGroupEnable(data: any) {
+    if ((this.addUserList && this.addUserList.length > 0) || (this.rulesList && this.rulesList.length > 0)) {
+      const isMappedInUsers = this.addUserList?.some((res: any) => res.groupName === data.groupName);
+      const isMappedInRules = this.rulesList?.some((res: any) => res.groupName === data.groupName);
+      if (isMappedInUsers || isMappedInRules) {
+        this.notification.remove();
+        this.notification.warning('Alert', 'This Group ID is mapped to a user. Please delete the user first to delete this Group ID.');
+        return;
+      }
+    }
+    this.selectedAccountsList = [];
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: 'Please confirm that you want to delete this Group.',
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        if (this.isEditMode) {
+          if (this.previousData?.groupEnableList?.some(
+            (item: any) => item.groupName === data.groupName
+          )) {
+            this.deletedList = {
+              ...this.deletedList,
+              groupName: [...this.deletedList.groupName, data.groupName]
+            }
+            // this.service.removetheCustomerDetails({ groupName: data.groupName }).subscribe((res: any) => {
+            //   if (res.data.responseStatus.status === 'success') {
+            //     this.groupEnableList = this.groupEnableList.filter((rec) => rec.groupName !== data.groupName);
+            //   } else {
+            //     this.notification.warning('Alert', res.data.responseStatus.message);
+            //   }
+            // })
+          }
+        }
+        this.groupEnableList = this.groupEnableList.filter((rec) => rec.groupName !== data.groupName);
+        if (this.groupEnableList.length > 0) {
+          this.addCustForm.get('rules.groupName')?.addValidators([Validators.required]);
+          this.addCustForm.updateValueAndValidity();
+        } else {
+          this.addCustForm.get('rules.groupName')?.removeValidators([Validators.required]);
+          this.addCustForm.updateValueAndValidity();
+        }
+        this._cdr.detectChanges();
+        this.notification.remove();
+        this.notification.success('Success', 'Group deleted successfully.');
+
+      },
+      nzCancelText: 'No',
+    })
+
+    // this.groupEnableList = this.groupEnableList.filter((rec) => rec.groupName !== data.groupName);
+  }
+
+  resetGroupEnableForm() {
+    this.isEditGroupEnable = false;
+    this.editedGroupEnabledIndex = null;
+    this.addCustForm.get('groups')?.reset({ emitEvent: false, onlySelf: true });
+    this.addCustForm.get('groups.isEnabled')?.patchValue(true, { emitEvent: false, onlySelf: true });
+    this.addCustForm.get('groups.groupName')?.enable();
+  }
+
+  checkGroupValidation() {
+    if (!this.addCustForm.get('groupEnable')?.value || this.groupEnableList.length === 0) {
+      const uniqueRoles = [
+        ...new Set(
+          this.addUserList.flatMap(item => item.groupUserRole ? item.groupUserRole : [])
+        )
+      ];
+      if (!uniqueRoles.includes('CHECKER')) {
+        this.addCustForm.get('rules.checkerCount')?.setValue('0', { emitEvent: false, onlySelf: true });
+        this.addCustForm.get('rules.checkerCount')?.disable({ emitEvent: false, onlySelf: true });
+      } else {
+        this.addCustForm.get('rules.checkerCount')?.enable({ emitEvent: false, onlySelf: true });
+      }
+      if (!uniqueRoles.includes('AUTHORIZER')) {
+        this.addCustForm.get('rules.authorizerCount')?.setValue('0', { emitEvent: false, onlySelf: true });
+        this.addCustForm.get('rules.authorizerCount')?.disable({ emitEvent: false, onlySelf: true });
+      } else {
+        this.addCustForm.get('rules.authorizerCount')?.enable({ emitEvent: false, onlySelf: true });
+      }
+      this.addCustForm.get('rules')?.updateValueAndValidity();
+    }
+  }
+
+  addUser() {
+
+    if (this.custType === 'Retail') {
+      this.addCustForm.get('users.groupUserRole')?.disable({ emitEvent: false, onlySelf: true });
+      this.addCustForm.get('users')?.updateValueAndValidity()
+    }
+    const addUserControl = this.addCustForm.get('users') as FormGroup;
+    const usersFormValue = this.addCustForm.get('users')?.getRawValue();
+    if (this.availableName) {
+      if (addUserControl?.valid) {
+        if (parseFloat(usersFormValue.fromLimit) > parseFloat(usersFormValue.toLimit)) {
+          this.notification.remove();
+          this.notification.warning('Alert', 'To Limit cannot be less than From Limit.');
+          return;
+        }
+        if (parseFloat(usersFormValue.fromLimit) === parseFloat(usersFormValue.toLimit)) {
+          this.notification.remove();
+          this.notification.warning('Alert', 'To Limit cannot be same as From Limit.');
+          return;
+        }
+        const subProductAccess: any[] = usersFormValue.subProductAccess || [];
+        const cleanedSubProductAccess = subProductAccess.map(item => item.split(' - ')[0].trim());
+        const allProducts: any[] = Object.entries(this.productType).flatMap(([category, products]: [string, any]) =>
+          products.map((product: any) => ({ ...product, category }))
+        );
+        const matchedProductTypes: string[] = allProducts
+          .filter(product => cleanedSubProductAccess.includes(product.productDispName))
+          .map(product => `${product.productType} - ${product.category}`);
+        const addUserPayload = {
+          userId: usersFormValue.userId,
+          userFName: usersFormValue.userFName,
+          userLName: usersFormValue.userLName,
+          mobileNo: usersFormValue.mobileNo,
+          emailId: usersFormValue.emailId,
+          cifId: usersFormValue.cifId,
+          accountNo: usersFormValue.accountNo,
+          // groupName: usersFormValue.groupName,
+          fromLimit: usersFormValue.fromLimit,
+          toLimit: usersFormValue.toLimit,
+          groupUserRole: usersFormValue.groupUserRole,
+          productAccess: usersFormValue.productAccess,
+          subProductAccess: usersFormValue.subProductAccess,
+          subProductTypeAccess: matchedProductTypes,
+          isTwoFactorEnabled: usersFormValue.isTwoFactorEnabled === true && this.isOverride === 0 && this.isTwoFactorEnabled === 2 ? 2 : usersFormValue.isTwoFactorEnabled === true && this.isOverride === 0 && this.isTwoFactorEnabled === 1 ? 1 : usersFormValue.isTwoFactorEnabled === true ? 1 : 0,
+          isEmail: usersFormValue.isEmail === true && this.isOverride === 0 && this.isEmail === 2 ? 2 : usersFormValue.isEmail === true && this.isOverride === 0 && this.isEmail === 1 ? 1 : usersFormValue.isEmail === true ? 1 : 0,
+          isSms: usersFormValue.isSms === true && this.isOverride === 0 && this.isSms === 2 ? 2 : usersFormValue.isSms === true && this.isOverride === 0 && this.isSms === 1 ? 1 : usersFormValue.isSms === true ? 1 : 0,
+        };
+        if (usersFormValue.isTwoFactorEnabled === true && usersFormValue.isEmail === false && usersFormValue.isSms === false) {
+          this.notification.info('Information', 'Two Factor Authentication is enabled but both Email and SMS options are disabled. Please enable at least one option for Two Factor Authentication to work.');
+        }
+        if (this.isEditAddUser && this.editedAddUserIndex !== null) {
+          const currentData = this.addCustForm.get('users')?.getRawValue();
+
+            if (JSON.stringify(currentData) === JSON.stringify(this.originalEditUserData)) {
+              this.notification.remove();
+              this.notification.info('Information', 'No changes done.');
+              return;
+            }
+          const updatedList = [...this.addUserList];
+          updatedList[this.editedAddUserIndex] = { ...addUserPayload, isEnabled: this.addUserList[this.editedAddUserIndex].isEnabled };
+          this.addUserList = updatedList;
+        } else {
+          const errors: string[] = [];
+
+          if (this.addUserList?.some(r => r.userId === addUserPayload.userId)) {
+            errors.push('User ID already exists.');
+          }
+
+          if (this.addUserList?.some(r => r.emailId === addUserPayload.emailId)) {
+            errors.push('Email ID already exists.');
+          }
+
+          if (this.addUserList?.some(r => r.mobileNo === addUserPayload.mobileNo)) {
+            errors.push('Mobile number already exists.');
+          }
+
+          if (errors.length) {
+            const message = errors
+              .map((msg, index) => `${index + 1}. ${msg}`)
+              .join('<br/>');
+            this.notification.remove();
+            this.notification.warning('Alert', message, {
+              nzDuration: 3000,
+              nzPauseOnHover: true
+            });
+
+            return;
+          }
+
+          this.addUserList = [...this.addUserList, { ...addUserPayload, isEnabled: true }];
+          // this.checkGroupValidation();
+        }
+        this.resetAddUserForm();
+        this.isIndividualTab = false;
+        this.addCustForm.get('users.userId')?.enable();
+        this.addCustForm.get('users')?.patchValue({
+          isTwoFactorEnabled: this.isTwoFactorEnabled === '1' || this.isTwoFactorEnabled === 1 ? true : false,
+          isEmail: this.isEmail === '1' || this.isEmail === 1 ? true : false,
+          isSms: this.isSms === '1' || this.isSms === 1 ? true : false,
+        });
+      } else {
+        Object.values(addUserControl.controls).forEach(control => {
+          if (control.invalid) {
+            control.markAsDirty();
+            control.updateValueAndValidity({ onlySelf: true });
+          }
+        });
+        this.onGroupEnableChange();
+        this.notification.remove();
+        this.notification.warning('Alert', 'Please fill all mandatory data.');
+      }
+    } else {
+      this.notification.remove();
+      this.notification.error('Error', 'User Id details already present');
+      this.addCustForm.get('users.userId')?.markAsDirty();
+      this.addCustForm.updateValueAndValidity();
+
+
+    }
+  }
+
+  editUser(data: any, i: number) {
+    this.editallforms = true;
+    if (this.activeUserIndex === 0) { 
+      this.isIndividualTab = true; 
+      this.isGroupTab = false; 
+    }
+    else if (this.activeUserIndex === 1) { 
+      this.isIndividualTab = false; 
+      this.isGroupTab = true; 
+    }
+    this.isEditAddUser = true;
+    this.showForm = true
+    this.editedAddUserIndex = i;
+    this.accNoAgainstCif = [];
+    if (data.cifId) {
+      this.isUserAccReadOnly = false;
+      this.multipleCifList.forEach((res) => {
+        if (res.cifId === data.cifId) {
+          this.accNoAgainstCif = res.selectedAccountsList
+        }
+      })
+    }
+
+    if (data.productAccess == 'TRADEFINANCE') {
+      this.subProductAccessList = this.productNames['TRADEFINANCE'];
+    } else if (data.productAccess == 2) {
+      this.subProductAccessList = [...this.productNames['TRADEFINANCE'], ...this.productNames['IEDPMS']];
+    } else if (data.productAccess == 'IEDPMS') {
+      this.subProductAccessList = this.productNames['IEDPMS'];
+    } else {
+      this.subProductAccessList = [];
+    }
+    this.addCustForm.get('users')?.patchValue({
+      userId: data.userId,
+      userFName: data.userFName,
+      userLName: data.userLName,
+      mobileNo: data.mobileNo,
+      emailId: data.emailId,
+      selectionType: data.selectionType,
+      cifId: data.cifId,
+      accountNo: data.accountNo,
+      groupName: data.groupName,
+      groupUserRole: data.groupUserRole,
+      fromLimit: data.fromLimit,
+      toLimit: data.toLimit,
+      productAccess: data.productAccess,
+      subProductAccess: data.subProductAccess,
+      isTwoFactorEnabled: data.isTwoFactorEnabled === 2 || data.isTwoFactorEnabled === 1 ? true : false,
+      isEmail: data.isEmail === 2 || data.isEmail === 1 ? true : false,
+      isSms: data.isSms === 2 || data.isSms === 1 ? true : false,
+      isEnabled: data.isEnabled || false
+    });
+    this.originalEditUserData = this.addCustForm.get('users')?.getRawValue();
+    if (this.groupEnableList.length > 0) {
+      this.onGroupEnableChange();
+    } else {
+      // this.checkGroupValidation();
+    }
+    if (this.isEditMode && this.previousData.addUserList.some(item => item.userId === data.userId)) {
+      this.addCustForm.get('users.userId')?.disable();
+    }
+  }
+
+  disableUser(data: any, i: number) {
+    const action = data.isEnabled ? 'Disable' : 'Enable'
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: `Please confirm that you want to ${action} this User`,
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        this.addUserList = this.addUserList.map((item: any, index: number) => {
+          const result = item.isEnabled === undefined ? true : !item.isEnabled;
+          if (i === index) {
+            return { ...item, isEnabled: result };
+          }
+          return item;
+        })
+        this._cdr.detectChanges();
+      },
+      nzCancelText: 'No',
+    })
+
+    this._cdr.detectChanges();
+  }
+
+  deleteUser(data: any) {
+    this.selectedAccountsList = [];
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: 'Please confirm that you want to delete this User',
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        if (this.isEditMode) {
+          if (this.previousData?.addUserList?.some(
+            (item: any) => item.userId === data.userId
+          )) {
+            this.deletedList = {
+              ...this.deletedList,
+              userId: [...this.deletedList.userId, data.userId]
+            }
+            // this.service.removetheCustomerDetails({ userId: data.userId }).subscribe((res: any) => {
+            //   if (res.data.responseStatus.status === 'success') {
+            //     this.addUserList = this.addUserList.filter((rec) => rec.userId !== data.userId);
+            //   } else {
+            //     this.notification.warning('Alert', res.data.responseStatus.message);
+            //   }
+            // })
+          }
+        }
+        this.addUserList = this.addUserList.filter((rec) => rec.userId !== data.userId);
+        this._cdr.detectChanges();
+        this.notification.remove();
+        this.notification.success('Success', 'User deleted successfully.');
+      },
+      nzCancelText: 'No',
+    })
+    // this.addUserList = this.addUserList.filter((rec) => rec.userId !== data.userId);
+  }
+
+  resetAddUserForm() {
+    this.isEditAddUser = false;
+    this.editedAddUserIndex = null;
+    this.addCustForm.get('users')?.reset({ emitEvent: false, onlySelf: true });
+    this.addCustForm.get('users.isEnabled')?.patchValue(true, { emitEvent: false, onlySelf: true });
+    this.addCustForm.get('users.userId')?.enable();
+    this.onGroupEnableChange();
+    this.addCustForm.get('users')?.patchValue({
+      isTwoFactorEnabled: this.isTwoFactorEnabled === '1' || this.isTwoFactorEnabled === 1 ? true : false,
+      isEmail: this.isEmail === '1' || this.isEmail === 1 ? true : false,
+      isSms: this.isSms === '1' || this.isSms === 1 ? true : false,
+    });
+  }
+
+  addGroupUser() {
+    const addUserControl = this.addCustForm.get('groupUser') as FormGroup;
+    const usersFormValue = this.addCustForm.get('groupUser')?.getRawValue();
+    if (this.availableName1) {
+      if (addUserControl?.valid) {
+        const subProductAccess: any[] = usersFormValue.subProductAccess || [];
+        const cleanedSubProductAccess = subProductAccess.map(item => item.split(' - ')[0].trim());
+        const allProducts: any[] = Object.entries(this.productType).flatMap(([category, products]: [string, any]) =>
+          products.map((product: any) => ({ ...product, category }))
+        );
+        const matchedProductTypes: string[] = allProducts
+          .filter(product => cleanedSubProductAccess.includes(product.productDispName))
+          .map(product => `${product.productType} - ${product.category}`);
+        const addUserPayload = {
+          userId: usersFormValue.userId,
+          userFName: usersFormValue.userFName,
+          userLName: usersFormValue.userLName,
+          mobileNo: usersFormValue.mobileNo,
+          emailId: usersFormValue.emailId,
+          groupName: usersFormValue.groupName,
+          productAccess: usersFormValue.productAccess,
+          subProductAccess: usersFormValue.subProductAccess,
+          subProductTypeAccess: matchedProductTypes,
+          isTwoFactorEnabled: usersFormValue.isTwoFactorEnabled === true && this.isOverride === 0 && this.isTwoFactorEnabled === 2 ? 2 : usersFormValue.isTwoFactorEnabled === true && this.isOverride === 0 && this.isTwoFactorEnabled === 1 ? 1 : usersFormValue.isTwoFactorEnabled === true ? 1 : 0,
+          isEmail: usersFormValue.isEmail === true && this.isOverride === 0 && this.isEmail === 2 ? 2 : usersFormValue.isEmail === true && this.isOverride === 0 && this.isEmail === 1 ? 1 : usersFormValue.isEmail === true ? 1 : 0,
+          isSms: usersFormValue.isSms === true && this.isOverride === 0 && this.isSms === 2 ? 2 : usersFormValue.isSms === true && this.isOverride === 0 && this.isSms === 1 ? 1 : usersFormValue.isSms === true ? 1 : 0,
+        };
+        if (usersFormValue.isTwoFactorEnabled === true && usersFormValue.isEmail === false && usersFormValue.isSms === false) {
+          this.notification.info('Information', 'Two Factor Authentication is enabled but both Email and SMS options are disabled. Please enable at least one option for Two Factor Authentication to work.');
+        }
+        if (this.isEditGAddUser && this.editedAddGUserIndex !== null) {
+          const currentData = this.addCustForm.get('groupUser')?.getRawValue();
+
+            if (JSON.stringify(currentData) === JSON.stringify(this.originalEditgroupUserData)) {
+              this.notification.remove();
+              this.notification.info('Information', 'No changes done.');
+              return;
+            }
+          const updatedList = [...this.addGUserList];
+          updatedList[this.editedAddGUserIndex] = { ...addUserPayload, isEnabled: this.addGUserList[this.editedAddGUserIndex].isEnabled };
+          this.addGUserList = updatedList;
+        } else {
+          const errors: string[] = [];
+
+          if (this.addGUserList?.some(r => r.userId === addUserPayload.userId)) {
+            errors.push('User ID already exists.');
+          }
+
+          if (this.addGUserList?.some(r => r.emailId === addUserPayload.emailId)) {
+            errors.push('Email ID already exists.');
+          }
+
+          if (this.addGUserList?.some(r => r.mobileNo === addUserPayload.mobileNo)) {
+            errors.push('Mobile number already exists.');
+          }
+
+          if (errors.length) {
+            const message = errors
+              .map((msg, index) => `${index + 1}. ${msg}`)
+              .join('<br/>');
+            this.notification.remove();
+            this.notification.warning('Alert', message, {
+              nzDuration: 3000,
+              nzPauseOnHover: true
+            });
+
+            return;
+          }
+
+          this.addGUserList = [...this.addGUserList, { ...addUserPayload, isEnabled: true }];
+          // this.checkGroupValidation();
+        }
+        this.resetAddGUserForm();
+        this.isGroupTab = false;
+        this.addCustForm.get('groupUser')?.patchValue({
+          isTwoFactorEnabled: this.isTwoFactorEnabled === 2 || this.isTwoFactorEnabled === 1 ? true : false,
+          isEmail: this.isEmail === 2 || this.isEmail === 1 ? true : false,
+          isSms: this.isSms === 2 || this.isSms === 1 ? true : false,
+        });
+
+      } else {
+        Object.values(addUserControl.controls).forEach(control => {
+          if (control.invalid) {
+            control.markAsDirty();
+            control.updateValueAndValidity({ onlySelf: true });
+          }
+        });
+        this.onGroupEnableChange();
+        this.notification.remove();
+        this.notification.warning('Alert', 'Please fill all mandatory data.');
+      }
+    } else {
+      this.notification.remove();
+      this.notification.error('Error', 'User Id details already present');
+      this.addCustForm.get('users.userId')?.markAsDirty();
+      this.addCustForm.updateValueAndValidity();
+
+
+    }
+  }
+
+
+  editGUser(data: any, i: number) {
+    this.editallforms = true;
+    if (this.activeUserIndex === 0) { 
+      this.isIndividualTab = true; 
+      this.isGroupTab = false; 
+    }
+    else if (this.activeUserIndex === 1) { 
+      this.isIndividualTab = false; 
+      this.isGroupTab = true; 
+    }
+    this.isEditGAddUser = true;
+    this.showForm = true
+    this.editedAddGUserIndex = i;
+    this.accNoAgainstCif = [];
+    // if (data.cifId) {
+    //   this.isUserAccReadOnly = false;
+    //   this.multipleCifList.forEach((res) => {
+    //     if (res.cifId === data.cifId) {
+    //       this.accNoAgainstCif = res.selectedAccountsList
+    //     }
+    //   })
+    // }
+
+    if (data.productAccess == 'TRADEFINANCE') {
+      this.subProductAccessList1 = this.productNames['TRADEFINANCE'];
+    } else if (data.productAccess == 2) {
+      this.subProductAccessList1 = [...this.productNames['TRADEFINANCE'], ...this.productNames['IEDPMS']];
+    } else if (data.productAccess == 'IEDPMS') {
+      this.subProductAccessList1 = this.productNames['IEDPMS'];
+    } else {
+      this.subProductAccessList1 = [];
+    }
+
+    this.addCustForm.get('groupUser')?.patchValue({
+      userId: data.userId,
+      userFName: data.userFName,
+      userLName: data.userLName,
+      mobileNo: data.mobileNo,
+      emailId: data.emailId,
+      // selectionType: data.selectionType,
+      // cifId: data.cifId,
+      // accountNo: data.accountNo,
+      groupName: data.groupName,
+      // groupUserRole: data.groupUserRole,
+      // fromLimit: data.fromLimit,
+      // toLimit: data.toLimit,
+      productAccess: data.productAccess,
+      subProductAccess: data.subProductAccess,
+      isTwoFactorEnabled: data.isTwoFactorEnabled === 1 || data.isTwoFactorEnabled === 2 ? true : false,
+      isEmail: data.isEmail === 1 || data.isEmail === 2 ? true : false,
+      isSms: data.isSms === 1 || data.isSms === 2 ? true : false,
+      isEnabled: data.isEnabled || false
+    });
+    this.originalEditgroupUserData = this.addCustForm.get('groupUser')?.getRawValue();
+    if (this.groupEnableList.length > 0) {
+      this.onGroupEnableChange();
+    } else {
+      // this.checkGroupValidation();
+    }
+    if (this.isEditMode && this.previousData.addGUserList.some(item => item.userId === data.userId)) {
+      this.addCustForm.get('groupUser.userId')?.disable();
+    }
+  }
+
+  disableGUser(data: any, i: number) {
+    const action = data.isEnabled ? 'Disable' : 'Enable'
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: `Please confirm that you want to ${action} this User`,
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        this.addGUserList = this.addGUserList.map((item: any, index: number) => {
+          const result = item.isEnabled === undefined ? true : !item.isEnabled;
+          if (i === index) {
+            return { ...item, isEnabled: result };
+          }
+          return item;
+        })
+        this._cdr.detectChanges();
+      },
+      nzCancelText: 'No',
+    })
+
+    this._cdr.detectChanges();
+  }
+
+  deleteGUser(data: any) {
+    this.selectedAccountsList = [];
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: 'Please confirm that you want to delete this User',
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        if (this.isEditMode) {
+          if (this.previousData?.addGUserList?.some(
+            (item: any) => item.userId === data.userId
+          )) {
+            this.deletedList = {
+              ...this.deletedList,
+              userId: [...this.deletedList.userId, data.userId]
+            }
+            // this.service.removetheCustomerDetails({ userId: data.userId }).subscribe((res: any) => {
+            //   if (res.data.responseStatus.status === 'success') {
+            //     this.addUserList = this.addUserList.filter((rec) => rec.userId !== data.userId);
+            //   } else {
+            //     this.notification.warning('Alert', res.data.responseStatus.message);
+            //   }
+            // })
+          }
+        }
+        this.addGUserList = this.addGUserList.filter((rec) => rec.userId !== data.userId);
+        this._cdr.detectChanges();
+        this.notification.remove();
+        this.notification.success('Success', 'User deleted successfully.');
+      },
+      nzCancelText: 'No',
+    })
+    // this.addUserList = this.addUserList.filter((rec) => rec.userId !== data.userId);
+  }
+
+  resetAddGUserForm() {
+    this.isEditGAddUser = false;
+    this.editedAddGUserIndex = null;
+    this.addCustForm.get('groupUser')?.reset({ emitEvent: false, onlySelf: true });
+    this.addCustForm.get('groupUser.isEnabled')?.patchValue(true, { emitEvent: false, onlySelf: true });
+    this.addCustForm.get('groupUser.userId')?.enable();
+    this.onGroupEnableChange();
+    this.addCustForm.get('groupUser')?.patchValue({
+      isTwoFactorEnabled: this.isTwoFactorEnabled === 2 || this.isTwoFactorEnabled === 1 ? true : false,
+      isEmail: this.isEmail === 2 || this.isEmail === 1 ? true : false,
+      isSms: this.isSms === 2 || this.isSms === 1 ? true : false,
+    });
+  }
+
+
+  addRule() {
+    this.notification.remove();
+    const rulesGroup = this.addCustForm.get('rules') as FormGroup;
+    const rulesFormValue = this.addCustForm.get('rules')?.getRawValue();
+    // if(this.addCustForm.get('rules')?.invalid) {
+
+    //   this.notification.warning('Alert', 'Please fill all mandatory data.');
+    //   return;
+    // }
+    if (rulesGroup?.valid) {
+      let authMatrix = '';
+      if (parseInt(rulesFormValue.checkerCount) > 0) {
+        authMatrix += rulesFormValue.checkerCount + 'C';
+      }
+      if (parseInt(rulesFormValue.authorizerCount) > 0) {
+        if (parseInt(rulesFormValue.checkerCount) > 0) {
+          authMatrix += '+' + rulesFormValue.authorizerCount + 'A';
+        } else {
+          authMatrix += rulesFormValue.authorizerCount + 'A';
+        }
+      }
+      // const groupRoles = this.groupEnableList.length > 0 ? this.groupEnableList.find(group => group.groupName === rulesFormValue.groupName)?.groupRole
+      //   : [
+      //     ...new Set(
+      //       this.addUserList.flatMap(item => item.groupUserRole ? item.groupUserRole : [])
+      //     )
+      //   ];
+      // if (groupRoles.includes('MAKER')) {
+      //   if (authMatrix === '') {
+      //     authMatrix = '1M'
+      //   } else {
+      //     authMatrix = '1M+' + authMatrix;
+      //   }
+      // }
+
+      const groupRoles = this.groupEnableList.length > 0
+        ? [
+          ...new Set(
+            this.groupEnableList
+              .filter(group => rulesFormValue.groupName?.includes(group.groupName))
+              .flatMap(group => group.groupRole || [])
+          )
+        ]
+        : [
+          ...new Set(
+            this.addUserList.flatMap(item => item.groupUserRole ? item.groupUserRole : [])
+          )
+        ];
+
+      if (groupRoles?.includes('MAKER')) {
+        if (authMatrix === '') {
+          authMatrix = '1M';
+        } else {
+          authMatrix = '1M+' + authMatrix;
+        }
+      }
+
+      if (authMatrix === '') {
+        rulesGroup?.get('checkerCount')?.setErrors({ required: true });
+        rulesGroup?.get('authorizerCount')?.setErrors({ required: true });
+        this.notification.remove();
+        this.notification.warning('Alert', 'Auth Matrix cannot be empty. Please specify Checker Count and/or Authorizer Count.');
+        return;
+      }
+      const rulePayload: Rules = {
+        groupName: rulesFormValue.groupName,
+        authMatrix: authMatrix,
+        // fromLimit: rulesFormValue.fromLimit,
+        // toLimit: rulesFormValue.toLimit,
+
+      }
+      const validationMessage = this.validateRulePayload(rulePayload);
+
+      if (validationMessage) {
+        this.notification.remove();
+        this.notification.warning('Alert', validationMessage);
+        this.markRulesInvalidFieldsDirty();
+        return;
+      }
+
+      const exists = this.rulesList?.some((r: any) =>
+        r.groupName === rulesFormValue.groupName &&
+        r.authMatrix === rulesFormValue.authMatrix
+        // r.fromLimit === rulesFormValue.fromLimit &&
+        // r.toLimit === rulesFormValue.toLimit &&
+      );
+      // if (this.addCustForm.get('groupEnable')?.value && this.groupEnableList.length > 0) {
+      //   const groupUsersCount = this.addUserList.filter((user : any) =>
+      //     user.groupName?.some((group: any) =>
+      //       rulesFormValue.groupName?.includes(group)
+      //     )
+      //   ).length;
+      //     if ((groupUsersCount < (parseInt(rulesFormValue.checkerCount) + parseInt(rulesFormValue.authorizerCount)))) {
+      //     this.notification.remove();
+      //     this.notification.warning('Alert', 'Rule cannot be added as the number of users in the group is less than the total number of checkers and authorizers specified.');
+      //     return;
+      //   }
+      // }
+
+      if (this.addCustForm.get('groupEnable')?.value && this.groupEnableList.length > 0) {
+
+        const selectedGroups = new Set(rulesFormValue.groupName || []);
+
+        const groupUsersCount = this.addGUserList.filter((user: any) => {
+          const userGroups = Array.isArray(user.groupName)
+            ? user.groupName
+            : [user.groupName];
+
+          return user.groupName.some((g: string) => selectedGroups.has(g));
+        }).length;
+
+        const checkerCount = parseInt(rulesFormValue.checkerCount || '0');
+        const authorizerCount = parseInt(rulesFormValue.authorizerCount || '0');
+        const requiredUsers = checkerCount + authorizerCount;
+
+        if (groupUsersCount < requiredUsers) {
+          this.notification.remove();
+          this.notification.warning(
+            'Alert',
+            'Rule cannot be added as the number of users in the group is less than the total number of checkers and authorizers specified.'
+          );
+          return;
+        }
+      }
+
+      // this.onToLimitBlur(this.groupdetails);
+      // this.onFromLimitBlur(this.groupdetails);
+      if (this.isEditRuleEnable && this.editedRuleIndex !== null) {
+        const updatedList = [...this.rulesList];
+        updatedList[this.editedRuleIndex] = { ...rulePayload, isEnabled: this.rulesList[this.editedRuleIndex].isEnabled };
+        this.rulesList = updatedList;
+        this.resetRulesForm();
+      } else {
+        if (exists) {
+          this.notification.remove();
+          this.notification.warning('Alert', 'Duplicate records are not allowed to be added.');
+          return;
+        } else {
+          this.rulesList = [...this.rulesList, { ...rulePayload, isEnabled: true }];
+          this.isruleTab = false;
+          this.resetRulesForm();
+        }
+      }
+    } else {
+      this.notification.remove();
+      this.notification.warning('Alert', 'Please fill all mandatory data.');
+      this.markRulesInvalidFieldsDirty();
+    }
+  }
+
+  validateRulePayload(payload: Rules): string | null {
+    if (
+      !payload.authMatrix
+      // ||
+      // payload.fromLimit === null ||
+      // payload.fromLimit === undefined ||
+      // payload.toLimit === null ||
+      // payload.toLimit === undefined
+    ) {
+      if (this.addGroupEnable.length > 0 && !payload.groupName) {
+        return 'Please enter all the fields';
+      }
+      return 'Please enter all the fields';
+    }
+    // if (Number(payload.toLimit) === 0) {
+    //   return 'To Limit should not be zero';
+    // }
+
+    return null;
+  }
+
+  markRulesInvalidFieldsDirty(): void {
+    const rulesGroup = this.addCustForm.get('rules') as FormGroup;
+
+    Object.keys(rulesGroup.controls).forEach(key => {
+      const control = rulesGroup.get(key);
+
+      if (control && control.invalid) {
+        control.markAsDirty();
+        control.markAsTouched();
+        control.updateValueAndValidity();
+      }
+    });
+  }
+
+  get checkerCountControl(): AbstractControl {
+    return this.rulesForm?.get('checkerCount') as AbstractControl;
+  }
+
+  get authorizerCountControl(): AbstractControl {
+    return this.rulesForm?.get('authorizerCount') as AbstractControl;
+  }
+
+  editRule(data: any, i: number) {
+    this.isEditRuleEnable = true;
+    this.editedRuleIndex = i;
+    let checkerCount = 0;
+    let authorizerCount = 0;
+    const authMatrix = data.authMatrix;
+    if (authMatrix) {
+      const checkerMatch = authMatrix.match(/(\d+)\s*C/);
+      const authorizerMatch = authMatrix.match(/(\d+)\s*A/);
+
+      checkerCount = checkerMatch ? parseInt(checkerMatch[1], 10) : 0;
+      authorizerCount = authorizerMatch ? parseInt(authorizerMatch[1], 10) : 0;
+    }
+
+    this.addCustForm.get('rules')?.patchValue({
+      groupName: data.groupName,
+      authorizerCount: authorizerCount,
+      checkerCount: checkerCount,
+      // fromLimit: data.fromLimit,
+      // toLimit: data.toLimit,
+      isEnabled: data.isEnabled
+    });
+    // this.checkGroupValidation();
+  }
+
+  disableRule(data: any, i: number) {
+    const action = data.isEnabled ? 'Disable' : 'Enable'
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: `Please confirm that you want to ${action} this Rule`,
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        this.rulesList = this.rulesList.map((item: any, index: number) => {
+          const result = item.isEnabled === undefined ? true : !item.isEnabled;
+          if (i === index) {
+            return { ...item, isEnabled: result };
+          }
+          return item;
+        })
+        this._cdr.detectChanges();
+      },
+      nzCancelText: 'No',
+    });
+    this._cdr.detectChanges();
+  }
+
+  deleteRule(data: any) {
+    this.selectedAccountsList = [];
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: 'Please confirm that you want to delete this Rule',
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        if (this.isEditMode) {
+          if (this.previousData?.rulesList?.some(
+            (item: any) => item.ruleName === data.ruleName
+          )) {
+            this.deletedList = {
+              ...this.deletedList,
+              rules: [...this.deletedList.rules, { ruleName: data.ruleName, domainId: this.domainId }]
+            }
+            // this.service.removetheCustomerDetails({ groupName: data.groupName, authMatrix: data.authMatrix }).subscribe((res: any) => {
+            //   if (res.data.responseStatus.status === 'success') {
+            //     this.rulesList = this.rulesList.filter((rec) => rec.groupName !== data.groupName);
+            //   } else {
+            //     this.notification.warning('Alert', res.data.responseStatus.message);
+            //   }
+            // })
+          }
+        }
+        this.rulesList = this.rulesList.filter((rec) => rec.ruleName !== data.ruleName);
+        this._cdr.detectChanges();
+        this.notification.remove();
+        this.notification.success('Success', 'Rule deleted successfully.');
+      },
+      nzCancelText: 'No',
+    })
+    // this.rulesList = this.rulesList.filter((rec) => rec.groupName !== data.groupName);
+  }
+
+  resetRulesForm() {
+    this.isEditRuleEnable = false;
+    this.editedRuleIndex = null;
+    this.addCustForm.get('rules')?.reset({ emitEvent: false, onlySelf: true });
+    this.addCustForm.get('rules.isEnabled')?.patchValue(true, { emitEvent: false, onlySelf: true });
+  }
+
+  submitAddCustForm(moduleName: string) {
+    this.notification.remove()
+    this.modal.closeAll();
+    this.verifySubmit();
+    if (this.submitInvalidControls && this.submitInvalidControls.length > 0) {
+      const message = this.submitInvalidControls.map((msg, index) => `${index + 1}. ${msg}`).join('<br/>');
+      this.notification.remove();
+      this.notification.warning('Alert', message, { nzDuration: 5000 });
+      this.submitInvalidControls = [];
+      return;
+    } else {
+      const printWarning = moduleName === 'Submit' ? 'Submitting' : 'Updating';
+      this.modal.closeAll();
+      this.modal.warning({
+        nzTitle: 'Confirm',
+        nzContent: `${printWarning} your request, Please confirm.`,
+        nzOkText: moduleName,
+        nzClosable: false,
+        nzOkType: 'primary',
+        nzOnOk: () => moduleName === 'Submit' ? this.submitRequest() : this.updateRequest(),
+        nzCancelText: 'No',
+      });
+    }
+  }
+
+  verifySubmit() {
+    if (this.multipleCifList && this.multipleCifList.length == 0) {
+      this.submitInvalidControls.push('Please enter CIF Details.');
+    } if (this.multipleCifList && this.multipleCifList.length == 1 && this.addCustForm.get('multipleCif')?.value) {
+      this.submitInvalidControls.push('If Multiple Cif is Enabled then you have to enter atleast two record in table.');
+    } if (!this.availableDomain && this.custType === 'Corporate') {
+      this.submitInvalidControls.push('Please enter & verify Domain Id');
+    } if (this.groupEnableList && this.groupEnableList.length == 0 && this.addCustForm.get('groupEnable')?.value) {
+      this.submitInvalidControls.push('Please enter Group Enable Details.');
+      // } if (this.addUserList && this.addUserList.length == 0) {
+      //   this.submitInvalidControls.push('Please enter Add User Details.');
+    } if (this.addCustForm.invalid) {
+      // console.log('Invalid Controls :::>>>>', this.getInvalidControls(this.addCustForm));
+      if ((this.custType === 'Corporate' && this.getInvalidControls(this.addCustForm).includes('domainId')) || (this.multipleCifList && this.multipleCifList.length === 0)) {
+        Object.values(this.addCustForm.controls).forEach(control => {
+          if (control.invalid) {
+            control.markAsDirty();
+            control.updateValueAndValidity({ onlySelf: true });
+          }
+        });
+        this.submitInvalidControls.push('Please fill all mandatory data.');
+      }
+    }
+
+    if (this.isEditMode) {
+      const currentData = {
+        multipleCifList: this.multipleCifList,
+        groupEnableList: this.groupEnableList,
+        addUserList: this.addUserList,
+        addGUserList: this.addGUserList,
+        addCustForm: this.addCustForm.getRawValue(),
+        rulesList: this.rulesList
+      }
+      const previousData = {
+        multipleCifList: this.tempmultipleCifList,
+        groupEnableList: this.tempgroupEnableList,
+        addUserList: this.tempaddUserList,
+        addGUserList: this.tempaddGUserList,
+        addCustForm: this.addCustForm.getRawValue(),
+        rulesList: this.temprulesList
+      };
+      console.log('Previous Data :::>>>', previousData)
+      console.log('Current Data :::>>>>>', currentData);
+
+      const cleanCurrent = this.prepareCompareData(currentData);
+      const cleanPrevious = this.prepareCompareData(previousData);
+
+      const updatedValues = this.getUpdatedValues(cleanPrevious, cleanCurrent);
+      const hasDeletion =
+        this.deletedList.groupName.length > 0 ||
+        this.deletedList.userId.length > 0 ||
+        this.deletedList.cifId.length > 0 ||
+        this.deletedList.rules.length > 0;
+
+      const hasUpdates = Object.keys(updatedValues).length > 0;
+
+      if (!hasUpdates && !hasDeletion) {
+        this.submitInvalidControls.push('No changes detected to update.');
+      }
+    }
+
+  }
+
+  getInvalidControls(formGroup: FormGroup): string[] {
+    const invalidControls: string[] = [];
+    Object.keys(formGroup.controls).forEach((controlName) => {
+      const control = formGroup.get(controlName);
+      if (control instanceof FormControl && control.invalid) {
+        invalidControls.push(controlName);
+      } else if (control instanceof FormGroup) {
+        invalidControls.push(...this.getInvalidControls(control));
+      }
+    });
+    return invalidControls;
+  }
+
+  submitRequest() {
+    const addRuleDtls = {
+      selectionType: this.addCustForm.get('rules.selectionType')?.value,
+      noOfUsers: this.addCustForm.get('rules.noOfUsers')?.value,
+      groupName: this.addCustForm.get('rules.groupName')?.value
+    }
+
+    let listOfUserRoleLocation = {}
+    this.store.select(selectUserRoleLocation).subscribe((res: UserRoleLocation) => {
+      if (res) {
+        listOfUserRoleLocation = res;
+      }
+    })
+    const userList = [
+      ...(this.addUserList ?? []).map((user: any) => ({ ...user, isGroupUser: false, actionType: 'Add' })),
+      ...(this.addGUserList ?? []).map((user: any) => ({ ...user, isGroupUser: true, actionType: 'Add' }))
+    ];
+    const payload = {
+      multipleCifList: (this.multipleCifList || []).map(item => ({ ...item, actionType: 'Add' })),
+      groupEnableList: (this.groupEnableList || []).map(item => ({ ...item, actionType: 'Add' })),
+      rulesList: (this.rulesList || []).map(item => ({ ...item, actionType: 'Add' })),
+      addUserList: userList,
+      domainId: this.addCustForm.get('domainId')?.getRawValue(),
+      addRuleDetails: addRuleDtls,
+      isMultipleCif: this.addCustForm.get('multipleCif')?.value ? 'Yes' : 'No',
+      isGroupEnabled: this.addCustForm.get('groupEnable')?.value ? 'Yes' : 'No',
+      actionType: 'Add',
+      custType: this.custType,
+      listOfUserRoleLocation: listOfUserRoleLocation
+    }
+    this.service.addCifDetails(payload).subscribe((res: any) => {
+      if (res.data.responseStatus.status === 'success') {
+        this.notification.remove();
+        this.notification.success('Success', res.data.responseStatus.message);
+        this.onBack();
+      } else {
+        this.notification.remove();
+        this.notification.warning('Alert', res.data.responseStatus.message);
+      }
+    })
+  }
+
+  confirmCheckerAction(action: string) {
+    this.checkerActionText = action
+    this.notification.remove()
+    this.modal.closeAll();
+    // this.modal.warning({
+    //   nzTitle: 'Confirm',
+    //   nzContent: `Please confirm to ${action}.`,
+    //   nzOkText: 'Yes',
+    //   nzClosable: false,
+    //   nzOkType: 'primary',
+    //   nzOnOk: () => this.getCheckerRemark(action),
+    //   nzCancelText: 'No',
+    // });
+
+    this.approveCustomer = false;
+    this.approveUser = false;
+    this.approveRules = false;
+
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: this.confirmTemplate,
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzCancelText: 'No',
+
+      nzOnOk: () => {
+        if (this.checkerActionText === 'Reject' || this.validateCheckboxes()) {
+          this.getCheckerRemark(action);
+          return true;
+        } else {
+          return false;
+        }
+      }
+    });
+
+  }
+
+  validateCheckboxes(): boolean {
+    const visibleSelections = [];
+    if (this.showCustomer) visibleSelections.push(this.approveCustomer);
+    if (this.showUser) visibleSelections.push(this.approveUser);
+    if (this.showRules) visibleSelections.push(this.approveRules);
+    const atleastOneChecked = visibleSelections.some(v => v === true);
+    const allChecked = visibleSelections.every(v => v === true);
+    // if (this.showCustomer && this.showUser && this.showRules){
+    if (!allChecked) {
+      this.customerDirty = true;
+      this.userDirty = true;
+      this.rulesDirty = true;
+      this.notification.warning(
+        'Alert',
+        'Please approve at all item from the checklist'
+      );
+      return false;
+    }
+    // }
+    // else{
+    //   if (!atleastOneChecked) {
+    //     if (this.showCustomer) this.customerDirty = true;
+    //     if (this.showUser) this.userDirty = true;
+    //     if (this.showRules) this.rulesDirty = true;
+    //     this.notification.warning(
+    //       'Alert',
+    //       'Please approve at least one item from the checklist'
+    //     );
+    //     return false;
+    //   }
+    // }
+    return true;
+  }
+
+  // validateCheckboxes(): boolean {
+  //   const errors: string[] = [];
+
+  //   if (this.showCustomer && !this.approveCustomer) {
+  //     this.customerDirty = true;
+  //     errors.push('Customer Details');
+  //   }
+
+  //   if (this.showUser && !this.approveUser) {
+  //     this.userDirty = true;
+  //     errors.push('User Details');
+  //   }
+
+  //   if (this.showRules && !this.approveRules) {
+  //     this.rulesDirty = true;
+  //     errors.push('Rules');
+  //   }
+
+  //   if (errors.length > 0) {
+  //     this.notification.error(
+  //       'Validation Error',
+  //       `Please approve: ${errors.join(', ')}`
+  //     );
+  //     return false;
+  //   }
+
+  //   return true;
+  // }
+
+
+  getCheckerRemark(actionName: string) {
+    this.modal.closeAll();
+    const modalRef = this.modal.create({
+      nzContent: CheckerRemarksComponent,
+      nzTitle: 'Add Remarks',
+      nzOkText: actionName,
+      nzCancelText: null,
+      nzWidth: '30%',
+      nzBodyStyle: { overflowY: 'scroll' },
+      nzOnOk: () => {
+        const modalComponent =
+          modalRef?.getContentComponent() as CheckerRemarksComponent;
+        this.checkerRemarks =
+          modalComponent.commentFrm.get('custRemark')?.value;
+        const remarks = modalComponent.commentFrm.get('custRemark')?.value;
+        if (remarks !== '') {
+          this.checkerAction(actionName);
+          return true;
+        } else {
+          this.notification.remove();
+          this.notification.warning('Alert', 'Please enter Remark');
+          remarks.markDirtyIfInvalid();
+          return false;
+        }
+      },
+    });
+  }
+
+  checkerAction(action: string) {
+    let payload = {
+      action: action.toLowerCase(),
+      remarks: this.checkerRemarks,
+      cifId: this.cif || '',
+      domainId: this.domainId || '',
+      custType: this.custType,
+      approveList: undefined as any,
+    };
+
+
+    if (action.toLowerCase() === 'approve') {
+
+      const approveList: any = {};
+
+      if (this.showCustomer && this.approveCustomer) {
+        approveList.customerDetails = true;
+      }
+
+      if (this.showUser && this.approveUser) {
+        approveList.userDetails = true;
+      }
+
+      if (this.showRules && this.approveRules) {
+        approveList.rules = true;
+      }
+
+      payload = {
+        ...payload,
+        approveList: approveList
+      };
+
+    }
+
+    this.service.pendingCheckerApprovel(payload).subscribe((response: any) => {
+      if (response.data.responseStatus.status === 'success') {
+        this.notification.remove();
+        this.notification.success('Success', response.data.responseStatus.message);
+        this.onBack();
+      } else {
+        this.notification.remove();
+        this.notification.warning('Alert', response.data.responseStatus.message);
+      }
+    });
+
+  }
+
+  onCancelForm() {
+    if (!this.isCheckerRole && !this.isDisableMode) {
+      this.notification.remove();
+      this.modal.closeAll();
+      this.modal.warning({
+        nzTitle: 'Confirm',
+        nzContent: 'Changes will be lost! Please confirm to continue.',
+        nzOkText: 'Yes',
+        nzCancelText: 'No',
+        nzClosable: false,
+        nzOkType: 'primary',
+        nzOnOk: () => {
+          this.onBack()
+        },
+      });
+    } else {
+      this.onBack()
+    }
+  }
+
+  updateRequest() {
+    const currentData = {
+      multipleCifList: this.multipleCifList,
+      groupEnableList: this.groupEnableList,
+      addUserList: this.addUserList,
+      addGUserList: this.addGUserList,
+      addCustForm: this.addCustForm.getRawValue(),
+      rulesList: this.rulesList,
+      custType: this.custType
+    }
+    const previousData = {
+      multipleCifList: this.tempmultipleCifList,
+      groupEnableList: this.tempgroupEnableList,
+      addUserList: this.tempaddUserList,
+      addGUserList: this.tempaddGUserList,
+      addCustForm: this.addCustForm.getRawValue(),
+      rulesList: this.temprulesList
+    };
+
+    const cleanCurrent = this.prepareCompareData(currentData);
+    const cleanPrevious = this.prepareCompareData(previousData);
+
+    const updatedValues = this.getUpdatedValues(cleanPrevious, cleanCurrent);
+
+    const { addCustForm, addGUserList, addUserList, ...rest } = updatedValues;
+    const { groupEnable, multipleCif, ...addCustFormRest } = addCustForm || {};
+    const initialMap = new Map<string, any>();
+
+    [
+      ...(this.tempaddUserList ?? []).map((u: any) => ({ ...u, isGroupUser: false })),
+      ...(this.tempaddGUserList ?? []).map((u: any) => ({ ...u, isGroupUser: true }))
+    ].forEach((u: any) => {
+      const key = `${u.userId}_${u.isGroupUser ? 'G' : 'I'}`;
+      initialMap.set(key, u);
+    });
+
+    // 🔹 Build new userList with actionType
+    const userList = [
+      ...(addUserList ?? []).map((user: any) => {
+        const newUser = { ...user, isGroupUser: false };
+        const key = `${newUser.userId}_I`;
+
+        return {
+          ...newUser,
+          actionType: initialMap.has(key) ? 'Update' : 'Add'
+        };
+      }),
+
+      ...(addGUserList ?? []).map((user: any) => {
+        const newUser = { ...user, isGroupUser: true };
+        const key = `${newUser.userId}_G`;
+
+        return {
+          ...newUser,
+          actionType: initialMap.has(key) ? 'Update' : 'Add'
+        };
+      })
+    ];
+    const updatedGroupEnableList = this.addActionTypeToRest(
+      rest.groupEnableList || [],
+      this.tempgroupEnableList,
+      'GROUP'
+    );
+
+    const updatedCifList = this.addActionTypeToRest(
+      rest.multipleCifList || [],
+      this.tempmultipleCifList,
+      'CIF'
+    );
+
+    const updatedRulesList = this.addActionTypeToRest(
+      rest.rulesList || [],
+      this.temprulesList,
+      'RULE'
+    );
+
+    const payload = {
+      ...rest,
+      ...addCustFormRest,
+      addUserList: userList,
+      groupEnableList: updatedGroupEnableList,
+      multipleCifList: updatedCifList,
+      rulesList: updatedRulesList,
+      ...(groupEnable !== undefined && {
+        isGroupEnabled: groupEnable ? 'Yes' : 'No',
+      }),
+      ...(multipleCif !== undefined && {
+        isMultipleCif: multipleCif ? 'Yes' : 'No',
+      }),
+      domainId: this.domainId,
+      cifId: this.cif,
+      actionType: 'Update',
+      custType: this.custType,
+      deletedList: this.deletedList
+    };
+    console.log(payload);
+    this.service.addCifDetails(payload).subscribe((response: any) => {
+      if (response.data.responseStatus.status === 'success') {
+        this.notification.remove();
+        this.notification.success('Success', response.data.responseStatus.message);
+        this.onBack();
+      } else {
+        this.notification.remove();
+        this.notification.warning('Alert', response.data.responseStatus.message);
+      }
+    });
+
+  }
+  getKey(item: any, type: 'GROUP' | 'CIF' | 'RULE'): string {
+    switch (type) {
+      case 'GROUP':
+        return item.groupName?.trim().toLowerCase();
+
+      case 'CIF':
+        return typeof item === 'object'
+          ? item.cifId?.toString()
+          : item?.toString();
+
+      case 'RULE':
+        return item.ruleName || JSON.stringify(item);
+
+      default:
+        return JSON.stringify(item);
+    }
+  }
+  addActionTypeToRest(
+    updatedList: any[],
+    tempList: any[],
+    type: 'GROUP' | 'CIF' | 'RULE'
+  ): any[] {
+
+    if (!updatedList?.length) return [];
+
+    const initialMap = new Map<string, any>();
+
+    (tempList || []).forEach((item: any) => {
+      const key = this.getKey(item, type);
+      initialMap.set(key, item);
+    });
+
+    return updatedList.map((item: any) => {
+      const key = this.getKey(item, type);
+
+      return {
+        ...item,
+        actionType: initialMap.has(key) ? 'Update' : 'Add'
+      };
+    });
+  }
+
+  getUpdatedValues(previousData: any, currentData: any) {
+    return this.getChangedValues(previousData, currentData);
+  }
+
+  getChangedValues(oldObj: any, newObj: any): any {
+
+    // same reference / same primitive
+    if (oldObj === newObj) return {};
+
+    // ignore undefined
+    if (newObj === undefined) return {};
+
+    // ================= ARRAY HANDLING =================
+    if (Array.isArray(newObj)) {
+      const oldArray = Array.isArray(oldObj) ? oldObj : [];
+
+      // empty arrays
+      if (oldArray.length === 0 && newObj.length === 0) {
+        return {};
+      }
+
+      // check if object array
+      const firstItem = newObj[0];
+
+      if (
+        firstItem &&
+        typeof firstItem === 'object' &&
+        !Array.isArray(firstItem)
+      ) {
+
+        const keyField = this.getArrayKey(firstItem);
+
+        // compare using unique key
+        if (keyField) {
+          const oldMap = new Map<string, any>();
+
+          oldArray.forEach((item: any) => {
+            oldMap.set(String(item[keyField]), item);
+          });
+
+          const changedItems: any[] = [];
+
+          for (const item of newObj) {
+            const key = String(item[keyField]);
+            const oldItem = oldMap.get(key);
+
+            const diff = this.getChangedValues(oldItem, item);
+
+            const isChanged =
+              (typeof diff === 'object' &&
+                diff !== null &&
+                Object.keys(diff).length > 0) ||
+              typeof diff !== 'object';
+
+            if (isChanged) {
+              changedItems.push(item);
+            }
+          }
+
+          return changedItems.length ? changedItems : {};
+        }
+      }
+
+      // primitive arrays compare
+      if (JSON.stringify(oldArray) !== JSON.stringify(newObj)) {
+        return newObj;
+      }
+
+      return {};
+    }
+
+    // ================= OBJECT HANDLING =================
+    if (typeof newObj === 'object' && newObj !== null) {
+
+      const changes: any = {};
+
+      const ignoredKeys = [
+        'subProductTypeAccess'
+      ];
+
+      const keys = new Set([
+        ...Object.keys(oldObj || {}),
+        ...Object.keys(newObj || {})
+      ]);
+
+      keys.forEach((key: string) => {
+
+        if (ignoredKeys.includes(key)) return;
+
+        const oldValue = oldObj ? oldObj[key] : undefined;
+        const newValue = newObj ? newObj[key] : undefined;
+
+        if (newValue === undefined) return;
+
+        const diff = this.getChangedValues(oldValue, newValue);
+
+        const isChanged =
+          (typeof diff === 'object' &&
+            diff !== null &&
+            Object.keys(diff).length > 0) ||
+          typeof diff !== 'object';
+
+        if (isChanged) {
+          changes[key] = diff;
+        }
+      });
+
+      return Object.keys(changes).length ? changes : {};
+    }
+
+    // ================= PRIMITIVE =================
+    return oldObj !== newObj ? newObj : {};
+  }
+
+
+  /* helper method */
+  getArrayKey(item: any): string | null {
+
+    // rulesList
+    if ('ruleName' in item) return 'ruleName';
+
+    // user lists
+    if ('userId' in item) return 'userId';
+
+    // groupEnableList
+    if (
+      'groupName' in item &&
+      'groupRole' in item &&
+      'selectedAccounts' in item
+    ) {
+      return 'groupName';
+    }
+
+    // multipleCifList
+    if (
+      'cifId' in item &&
+      'custName' in item
+    ) {
+      return 'cifId';
+    }
+
+    return null;
+  }
+
+  verifyUserId(value: string, module: string) {
+    if (this.isNickNameResponseRecieved && !this.isCheckerRole && !this.isDisableMode)
+      if (value && value.length > 3) {
+        if (
+          (module === 'user' && this.addCustForm.get('users.userId')?.valid) ||
+          (module === 'group' && this.addCustForm.get('groupUser.userId')?.valid)
+        ) {
+          const data = {
+            userId: module === 'user' ? this.addCustForm.get('users.userId')?.value :
+              this.addCustForm.get('groupUser.userId')?.value,
+          };
+          this.isNickNameResponseRecieved = false;
+          this.service
+            .validatingUserId(data)
+            .subscribe((response: any) => {
+              if (response.data.responseStatus.status === 'success') {
+                this.isNickNameResponseRecieved = true;
+                if (module === 'user') {
+                  this.availableName = true;
+                } else {
+                  this.availableName1 = true;
+                }
+              } else {
+                this.notification.remove();
+                this.notification.warning('Alert', response.data.responseStatus.message)
+                this.isNickNameResponseRecieved = true;
+                if (module === 'user') {
+                  this.availableName = false;
+                  this.addCustForm.get('users.userId')?.markAsDirty();
+                } else {
+                  this.availableName1 = false;
+                  this.addCustForm.get('groupUser.userId')?.markAsDirty();
+                }
+              }
+            });
+        }
+        if (module === 'user') {
+          this.addCustForm.get('users.userId')?.updateValueAndValidity();
+        } else {
+          this.addCustForm.get('groupUser.userId')?.updateValueAndValidity();
+        }
+        this._cdr.detectChanges();
+      }
+  }
+  verifyGroupName(value: string) {
+    if (value && value.length > 3) {
+      const data = {
+        groupName: this.addCustForm.get('groups.groupName')?.value
+      };
+      this.service.validatingUserId(data).subscribe((response: any) => {
+        if (response.data.responseStatus.status === 'success') {
+          //
+        } else {
+          this.notification.remove();
+          this.notification.warning('Alert', response.data.responseStatus.message)
+          this.addCustForm.get('groups.groupName')?.markAsDirty();
+          this.addCustForm.get('groups.groupName')?.markAsDirty();
+
+        }
+      });
+    }
+    this.addCustForm.get('users.userId')?.updateValueAndValidity();
+
+    this._cdr.detectChanges();
+
+  }
+
+  verifyDomainId(value: string) {
+    if (this.isDomainResponseRecieved && !this.isEditMode && !this.isCheckerRole && !this.isDisableMode)
+      if (value && value.length > 3) {
+        if (
+          this.addCustForm.get('domainId')?.valid
+        ) {
+          const data = {
+            domainId: this.addCustForm.get('domainId')?.value,
+          };
+          this.isDomainResponseRecieved = false;
+          this.service
+            .validatingDomainId(data)
+            .subscribe((response: any) => {
+              if (response.data.responseStatus.status === 'success') {
+                this.isDomainResponseRecieved = true;
+                this.availableDomain = true;
+                this.validDomain = true;
+              } else {
+                this.notification.remove();
+                this.notification.warning('Alert', response.data.responseStatus.message)
+                this.isDomainResponseRecieved = true;
+                this.availableDomain = false;
+                this.validDomain = false;
+                this.addCustForm?.get('domainId')?.markAsDirty();
+              }
+            });
+        }
+        this.addCustForm.get('domainId')?.updateValueAndValidity();
+        this._cdr.detectChanges();
+      }
+  }
+
+  checkDomain() {
+    this.addCustForm.get('users.emailId')?.valueChanges.subscribe(value => {
+      if (value && value.length > 0) {
+        if (this.custType === 'Corporate') {
+          this.addCustForm.get('domainId')?.setValidators([Validators.required]);
+          const domainId = this.addCustForm.get('domainId')?.value;
+          if (domainId === '' || domainId.length <= 3 || domainId === null) {
+            this.addCustForm.get('domainId')?.markAsDirty();
+            this.addCustForm.get('domainId')?.updateValueAndValidity();
+            this.addCustForm.get('users.emailId')?.patchValue('');
+
+            this.addCustForm.get('users.emailId')?.markAsDirty();
+            this.addCustForm.get('users.emailId')?.updateValueAndValidity();
+
+            this.notification.remove();
+            this.notification.warning('Alert', 'Please enter valid Domain Id First to enter Email Id.');
+          }
+        } else {
+          this.addCustForm.get('domainId')?.clearValidators();
+        }
+      }
+    })
+
+  }
+
+  deleteCIF() {
+    const deleteAction = this.custType === 'Corporate' ? 'Domain' : 'CIF'
+    this.notification.remove();
+    this.modal.closeAll();
+    this.modal.warning({
+      nzTitle: 'Confirm',
+      nzContent: `Please confirm that you want to delete all data of this ${deleteAction}`,
+      nzOkText: 'Yes',
+      nzClosable: false,
+      nzOkType: 'primary',
+      nzOnOk: () => {
+        const payload = {
+          cifId: this.cif || '',
+          domainId: this.domainId || '',
+          custType: this.custType,
+          addUserList: [...this.previousData.addUserList.map((item: any) => { return item.userId }), ...this.previousData.addGUserList.map((item: any) => { return item.userId })],
+          groupEnableList: this.previousData.groupEnableList.map((item: any) => { return item.groupName }),
+          multipleCifList: this.previousData.multipleCifList.map((item: any) => { return item.cifId }),
+          rulesList: this.previousData.rulesList.map((item: any) => { return { ruleName: item.ruleName, domainId: this.domainId } }),
+        };
+        this.service.removetheCustomerDetails(payload).subscribe((response: any) => {
+          if (response.data.responseStatus.status === 'success') {
+            this.notification.remove();
+            this.notification.success('Success', response.data.responseStatus.message);
+            this.onBack();
+          } else {
+            this.notification.remove();
+            this.notification.warning('Alert', response.data.responseStatus.message);
+          }
+        })
+      },
+      nzCancelText: 'No'
+    })
+  }
+
+  changeTabIndex(index: number) {
+    const allowChange = this.multipleCifList.length > 0;
+    if (!allowChange) {
+      this.notification.remove()
+      this.notification.warning('Alert', 'Please add CIF.')
+      setTimeout(() => {
+        this.activeTabIndex = 0;
+      });
+      this.SelectedTabIndex = 0;
+    } else {
+      this.activeTabIndex = 1;
+      this.SelectedTabIndex = this.activeTabIndex
+    }
+  }
+
+  maskMobileNumber(mobile: string): string {
+    if (!mobile || mobile.length < 4) {
+      return mobile;
+    }
+
+    const firstTwo = mobile.substring(0, 2);
+    const lastTwo = mobile.substring(mobile.length - 2);
+
+    return firstTwo + '******' + lastTwo;
+  }
+
+  maskEmail(email: string): string {
+    if (!email) return '';
+
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return email;
+
+    const visiblePart1 = name.charAt(0);
+    const visiblePart2 = name.charAt(name.length - 1);
+    const maskedId = '******';
+
+    const [domainName, extension] = domain.split('.');
+    const firstLetter = domainName.charAt(0);
+    const lastLetter = domainName.charAt(domainName.length - 1);
+    const maskedDomain = `${firstLetter}******${lastLetter}`;
+
+    return `${visiblePart1}${maskedId}${visiblePart2}@${maskedDomain}.${extension}`;
+  }
+
+  get checkers(): FormArray {
+    return this.rulesForm.get('checkers') as FormArray;
+  }
+
+  get authorizers(): FormArray {
+    return this.rulesForm.get('authorizers') as FormArray;
+  }
+
+  setCheckers(count: number) {
+    this.checkers.clear();
+    if (count) {
+      if ((this.filtercheckerUsers() + this.checkerUserList.length) < count) {
+        this.rulesForm.get('checkerCount')?.patchValue(0);
+        this.rulesForm.get('checkerCount')?.updateValueAndValidity();
+        let errorMsg = '';
+        switch (this.rulesForm.get('setRuleOn')?.value) {
+          case 'DOMAIN':
+            errorMsg = 'Checkers are not available for this domain';
+            break;
+
+          case 'CIF':
+            errorMsg = 'Checkers are not available for selected Cif Ids';
+            break;
+
+          case 'ACCOUNT':
+            errorMsg = 'Checkers are not available for selected Accounts';
+            break;
+
+          default:
+            errorMsg = 'Please select Apply Rules On';
+            break;
+        }
+        this.notification.remove()
+        this.notification.warning('Alert', errorMsg)
+      }
+
+      for (let i = 1; i <= count; i++) {
+        this.checkers.push(
+          new FormGroup({
+            checker: new FormControl(i),
+            groupList: new FormControl([]),
+            userList: new FormControl([])
+          })
+        );
+      }
+    }
+  }
+
+  setAuthorizers(count: number) {
+    this.authorizers.clear();
+    if (count) {
+      if ((this.filterAuthorizerUsers() + this.authorizerUserList.length) < count) {
+        this.rulesForm.get('authorizerCount')?.patchValue(0);
+        this.rulesForm.get('authorizerCount')?.updateValueAndValidity();
+        // this.notification.remove()
+        // this.notification.warning('Alert', 'Authorizers are not available for selected Cif Ids');
+        let errorMsg = '';
+        switch (this.rulesForm.get('setRuleOn')?.value) {
+          case 'DOMAIN':
+            errorMsg = 'Authorizers are not available for this domain';
+            break;
+
+          case 'CIF':
+            errorMsg = 'Authorizers are not available for selected Cif Ids';
+            break;
+
+          case 'ACCOUNT':
+            errorMsg = 'Authorizers are not available for selected Accounts';
+            break;
+
+          default:
+            errorMsg = 'Please select Apply Rules On';
+            break;
+        }
+        this.notification.remove()
+        this.notification.warning('Alert', errorMsg);
+      }
+
+      for (let i = 1; i <= count; i++) {
+        this.authorizers.push(
+          new FormGroup({
+            authorizer: new FormControl(i),
+            groupList: new FormControl([]),
+            userList: new FormControl([])
+          })
+        );
+      }
+
+    }
+  }
+  getCheckerGroupUsers(): any[] {
+    if (!this.checkerGroupList?.length) return [];
+
+    const groupSet = new Set(
+      this.checkerGroupList.map(g => g.trim().toLowerCase())
+    );
+
+    return (this.addGUserList || []).filter((user: any) =>
+      this.normalizeToArray(user.groupName).some((g: string) =>
+        groupSet.has(g?.trim().toLowerCase())
+      )
+    );
+  }
+
+  getAuthorizerGroupUsers(): any[] {
+    if (!this.authorizerGroupList?.length) return [];
+
+    const groupSet = new Set(
+      this.authorizerGroupList.map(g => g.trim().toLowerCase())
+    );
+
+    return (this.addGUserList || []).filter((user: any) =>
+      this.normalizeToArray(user.groupName).some((g: string) =>
+        groupSet.has(g?.trim().toLowerCase())
+      )
+    );
+  }
+
+  onApproversCountChange() {
+
+    // Checker Change
+    this.rulesForm.get('checkerCount')?.valueChanges.subscribe(count => {
+      this.setCheckers(count);
+
+      if (this.rulesForm.get('authorizerCount')?.value) {
+        this.validateUserCombination();
+      }
+    });
+
+    //  Authorizer Change
+    this.rulesForm.get('authorizerCount')?.valueChanges.subscribe(count => {
+      this.setAuthorizers(count);
+
+      if (this.rulesForm.get('checkerCount')?.value) {
+        this.validateUserCombination();
+      }
+    });
+
+    // ✅ Rule Type Change
+    this.rulesForm.get('setRuleOn')?.valueChanges.subscribe(value => {
+      if (!value) return;
+
+      switch (value) {
+
+        case 'DOMAIN':
+          this.rulesForm.get('domainId')?.patchValue(
+            this.addCustForm.get('domainId')?.value
+          );
+
+          this.updateUsersAndGroups('DOMAIN');
+          this.validateAvailability('Domain');
+          break;
+
+        case 'CIF':
+          this.rulesForm.get('cifId')?.addValidators([Validators.required]);
+          this.rulesForm.get('cifId')?.updateValueAndValidity();
+
+          this.rulesForm.get('accounts')?.removeValidators([Validators.required]);
+          this.rulesForm.get('accounts')?.updateValueAndValidity();
+          break;
+
+        case 'ACCOUNT':
+          this.rulesAccList = this.multipleCifList.flatMap(
+            (cif: any) => cif.selectedAccountsList || []
+          );
+
+          this.rulesForm.get('accounts')?.addValidators([Validators.required]);
+          this.rulesForm.get('accounts')?.updateValueAndValidity();
+
+          this.rulesForm.get('cifId')?.removeValidators([Validators.required]);
+          this.rulesForm.get('cifId')?.updateValueAndValidity();
+          break;
+      }
+    });
+
+    // ✅ CIF Change
+    this.rulesForm.get('cifId')?.valueChanges.subscribe((cif: any[]) => {
+      if (!cif || cif.length === 0) {
+        // this.resetLists();
+        return;
+      }
+
+      this.updateUsersAndGroups('CIF', cif);
+      this.validateAvailability('selected Cif Ids');
+    });
+
+    // ✅ Account Change
+    this.rulesForm.get('accounts')?.valueChanges.subscribe(account => {
+      if (!account || account.length === 0) {
+        // this.resetLists();
+        return;
+      }
+
+      this.updateUsersAndGroups('ACCOUNT', account);
+      this.validateAvailability('selected Accounts');
+    });
+  }
+  validateAvailability(type: string) {
+    const checkerCount = this.rulesForm.get('checkerCount')?.value;
+    const authorizerCount = this.rulesForm.get('authorizerCount')?.value;
+
+    if (
+      (this.filterAuthorizerUsers() === 0 && this.authorizerUserList.length === 0) ||
+      (authorizerCount && (this.filterAuthorizerUsers() + this.authorizerUserList.length) < authorizerCount)
+    ) {
+      this.rulesForm.get('authorizerCount')?.patchValue(0);
+      this.notification.remove();
+      this.notification.warning('Alert', `Authorizers are not available for ${type}`);
+    }
+
+    if (
+      (this.filtercheckerUsers() === 0 && this.checkerUserList.length === 0) ||
+      (checkerCount &&
+        (this.filtercheckerUsers() + this.checkerUserList.length) < checkerCount)
+    ) {
+      this.rulesForm.get('checkerCount')?.patchValue(0);
+      this.notification.remove();
+      this.notification.warning('Alert', `Checkers are not available for ${type}`);
+    }
+  }
+  updateUsersAndGroups(
+    type: 'DOMAIN' | 'CIF' | 'ACCOUNT',
+    value?: any[]
+  ) {
+    this.checkerGroupList = [];
+    this.authorizerGroupList = [];
+    this.checkerUserList = [];
+    this.authorizerUserList = [];
+
+    //  GROUP FILTERING
+    if (this.groupEnableList?.length > 0) {
+      this.groupEnableList.forEach((group: any) => {
+        let match = false;
+
+        if (type === 'DOMAIN') {
+          match = true;
+        } else if (type === 'CIF') {
+          match = group.cifId?.some((id: any) => value?.includes(id));
+        } else if (type === 'ACCOUNT') {
+          match = group.selectedAccounts?.some((id: any) => value?.includes(id));
+        }
+
+        if (match) {
+
+          //  check if this group actually has users mapped
+          const hasUsersInGroup = this.addGUserList?.some((u: any) => {
+            const groupNames = Array.isArray(u.groupName)
+              ? u.groupName
+              : [u.groupName];
+
+            return groupNames.some(
+              (g: string) =>
+                g?.trim().toLowerCase() === group.groupName?.trim().toLowerCase()
+            );
+          });
+
+          if (!hasUsersInGroup) return; //  skip unused groups
+
+          if (group.groupRole?.includes('CHECKER') &&
+            !this.checkerGroupList.includes(group.groupName)) {
+            this.checkerGroupList.push(group.groupName);
+          }
+
+          if (group.groupRole?.includes('AUTHORIZER') &&
+            !this.authorizerGroupList.includes(group.groupName)) {
+            this.authorizerGroupList.push(group.groupName);
+          }
+        }
+      });
+    }
+
+    // ✅ USER FILTERING
+    if (this.addUserList?.length > 0) {
+      const valueSet = new Set(value || []);
+
+      this.addUserList.forEach((user: any) => {
+        let match = false;
+
+        if (type === 'DOMAIN') {
+          match = true;
+        } else if (type === 'CIF') {
+          const userCifList = Array.isArray(user.cifId)
+            ? user.cifId
+            : typeof user.cifId === 'string'
+              ? user.cifId.split(',').map((id: string) => id.trim())
+              : [];
+
+          match = userCifList.some((id: any) => valueSet.has(id));
+        } else if (type === 'ACCOUNT') {
+          match = user.accountNo?.some((id: any) => valueSet.has(id));
+        }
+
+        if (!match) return;
+
+        if (user.groupUserRole?.includes('CHECKER')) {
+          this.checkerUserList.push(user.userId);
+        }
+
+        if (user.groupUserRole?.includes('AUTHORIZER')) {
+          this.authorizerUserList.push(user.userId);
+        }
+      });
+    }
+  }
+  resetLists() {
+    this.checkerUserList = [];
+    this.authorizerUserList = [];
+    this.checkerGroupList = [];
+    this.authorizerGroupList = [];
+    this.rulesForm.patchValue({
+      checkerCount: 0,
+      authorizerCount: 0
+    });
+  }
+
+  filterAuthorizerUsers(): number {
+    if (!this.authorizerGroupList?.length) return 0;
+
+    const groupSet = new Set(
+      this.authorizerGroupList.map(g => g.trim().toLowerCase())
+    );
+
+    const userSet = new Set<string>();
+
+    (this.addGUserList || []).forEach((user: any) => {
+      const hasMatch = this.normalizeToArray(user.groupName).some((g: string) =>
+        groupSet.has(g?.trim().toLowerCase())
+      );
+
+      if (hasMatch) {
+        userSet.add(user.userId);
+      }
+    });
+
+    return userSet.size;
+  }
+
+  filtercheckerUsers(): number {
+    if (!this.checkerGroupList?.length) return 0;
+
+    const groupSet = new Set(
+      this.checkerGroupList.map(g => g.trim().toLowerCase())
+    );
+
+    const userSet = new Set<string>();
+
+    (this.addGUserList || []).forEach((user: any) => {
+      const hasMatch = this.normalizeToArray(user.groupName).some((g: string) =>
+        groupSet.has(g?.trim().toLowerCase())
+      );
+
+      if (hasMatch) {
+        userSet.add(user.userId);
+      }
+    });
+
+    return userSet.size;
+  }
+
+  normalizeToArray(val: any): string[] {
+    if (!val) return [];
+    return Array.isArray(val) ? val : [val];
+  }
+  submitRule() {
+    const hasMaker =
+      this.addUserList?.some((u: any) =>
+        u.groupUserRole?.includes('MAKER')
+      ) ||
+      this.addGUserList?.some((g: any) =>
+        g.groupRole === 'MAKER'
+      );
+
+    if (!hasMaker && !this.isCheckerRole) {
+      this.notification.remove();
+      this.notification.warning('Alert', 'At least 1 Maker is required');
+      return;
+    }
+    const hasChecker = (this.checkerUserList.length > 0 || this.checkerGroupList.length > 0) && this.rulesForm.get('checkerCount')?.value > 0;
+
+
+    if (!hasChecker && !this.isCheckerRole) {
+      this.notification.remove();
+      this.notification.warning('Alert', 'At least 1 Checker is required');
+      return;
+    }
+
+    if (!this.validateUserCombination()) {
+      return;
+    }
+
+    if (this.rulesForm.get('setRuleOn')?.value === 'CIF') {
+      this.rulesForm.get('cifId')?.addValidators([Validators.required]);
+      this.rulesForm.get('cifId')?.updateValueAndValidity();
+    } else {  
+      this.rulesForm.get('cifId')?.clearValidators();
+      this.rulesForm.get('cifId')?.updateValueAndValidity();
+    }
+    if (this.rulesForm.get('setRuleOn')?.value === 'DOMAIN') {
+       this.rulesForm.get('domainId')?.addValidators([Validators.required]);
+      this.rulesForm.get('domainId')?.updateValueAndValidity();
+    } else {
+      this.rulesForm.get('domainId')?.clearValidators();
+      this.rulesForm.get('domainId')?.updateValueAndValidity();
+    }
+    if (this.rulesForm.get('setRuleOn')?.value === 'ACCOUNT') {
+      this.rulesForm.get('accounts')?.addValidators([Validators.required]);
+      this.rulesForm.get('accounts')?.updateValueAndValidity();
+    } else {
+      this.rulesForm.get('accounts')?.clearValidators();
+      this.rulesForm.get('accounts')?.updateValueAndValidity();
+    }
+
+    if (this.rulesForm.valid) {
+      const rulesFormValue = this.rulesForm?.getRawValue();
+
+      let authMatrix = '1M';
+      if (parseInt(rulesFormValue.checkerCount) > 0) {
+        authMatrix += '+' + rulesFormValue.checkerCount + 'C';
+      }
+      if (parseInt(rulesFormValue.authorizerCount) > 0) {
+        if (parseInt(rulesFormValue.checkerCount) > 0) {
+          authMatrix += '+' + rulesFormValue.authorizerCount + 'A';
+        } else {
+          authMatrix += rulesFormValue.authorizerCount + 'A';
+        }
+      }
+      const rulePayload = {
+        ...rulesFormValue,
+        authMatrix: authMatrix
+      }
+
+      const errorArr: string[] = []
+      const exist = this.rulesList?.filter((r: any) =>
+        r.setRuleOn === rulesFormValue.setRuleOn &&
+       ( r.cifId === rulesFormValue.cifId ||
+        r.accounts === rulesFormValue.accounts ||
+        r.domainId === rulesFormValue.domainId )
+      )
+
+      if (exist.length > 0) {
+        errorArr.push(`Rule authorization is already added for this ${rulesFormValue.setRuleOn}.`)
+      }
+      else {
+        if (this.rulesList?.some((r: any) =>
+          r.ruleName === rulesFormValue.ruleName)) {
+          errorArr.push('Rule Name already added.')
+        }
+        // const exists = this.rulesList?.filter((r: any) =>
+        //   r.authMatrix === authMatrix &&
+        //   r.setRuleOn === rulesFormValue.setRuleOn &&
+        //   r.cifId === rulesFormValue.cifId &&
+        //   r.accounts === rulesFormValue.accounts &&
+        //   r.domainId === rulesFormValue.domainId
+        // )
+
+        // if (exists.length > 0 && exist.length === 0){
+        //   errorArr.push(`Same rule is added to rule : ${exists[0].ruleName}.`)
+        // }
+      }
+
+      if (this.isEditRuleEnable && this.editedRuleIndex !== null) {
+        const currentData = this.rulesForm?.getRawValue();
+        if (JSON.stringify(currentData) === JSON.stringify(this.originalEditRuleData)) {
+          this.notification.remove();
+          this.notification.info('Information', 'No changes done.');
+          return;
+        }
+        const updatedList = [...this.rulesList];
+        updatedList[this.editedRuleIndex] = { ...rulePayload, isEnabled: this.rulesList[this.editedRuleIndex].isEnabled };
+        this.rulesList = updatedList;
+        this.resetRules();
+        this.isruleTab = false;
+      } else {
+        if (errorArr.length) {
+          const message = errorArr
+            .map((msg, index) => `${index + 1}. ${msg}`)
+            .join('<br/>');
+          this.notification.remove();
+          this.notification.warning('Alert', message, {
+            nzDuration: 3000,
+            nzPauseOnHover: true
+          });
+          return;
+        } else {
+          this.rulesList = [...this.rulesList, { ...rulePayload, isEnabled: true }];
+          this.resetRules();
+          this.isruleTab = false;
+        }
+      }
+    } else {
+      Object.values(this.rulesForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+      this.notification.remove();
+      this.notification.warning('Alert', 'Please fill all mandatory data.');
+    }
+    this._cdr.detectChanges();
+  }
+
+  editRuleItem(data: any, i: number) {
+    this.editallforms = true;
+    this.isEditRuleEnable = true;
+    this.isruleTab = true;
+    this.isIndividualTab = false;
+    this.isGroupTab = false;
+    this.showForm = true;
+    this.editedRuleIndex = i;
+    let checkerCount = 0;
+    let authorizerCount = 0;
+    const authMatrix = data.authMatrix;
+    if (authMatrix) {
+      const checkerMatch = authMatrix.match(/(\d+)\s*C/);
+      const authorizerMatch = authMatrix.match(/(\d+)\s*A/);
+
+      checkerCount = checkerMatch ? parseInt(checkerMatch[1], 10) : 0;
+      authorizerCount = authorizerMatch ? parseInt(authorizerMatch[1], 10) : 0;
+    }
+
+    this.rulesForm?.patchValue({
+      ruleName: data.ruleName,
+      authorizerCount: authorizerCount,
+      checkerCount: checkerCount,
+      accounts: data.accounts,
+      cifId: data.cifId,
+      domainId: data.domainId,
+      isEnabled: data.isEnabled,
+      setRuleOn: data.setRuleOn,
+      authorizers: data.authorizers,
+      checkers: data.checkers
+    }, { emitEvent: false });
+    this.originalEditRuleData = this.rulesForm?.getRawValue();
+    switch (data.setRuleOn) {
+      case 'DOMAIN':
+        this.updateUsersAndGroups('DOMAIN');
+        break;
+
+      case 'CIF':
+        this.updateUsersAndGroups('CIF', data.cifId);
+        break;
+
+      case 'ACCOUNT':
+        this.updateUsersAndGroups('ACCOUNT', data.accounts);
+        break;
+    }
+
+
+    // rebuild form arrays
+    this.setCheckers(checkerCount);
+    this.setAuthorizers(authorizerCount);
+    this.validateUserCombination();
+    this.checkers.clear();
+    this.authorizers.clear();
+
+    // ✅ Patch Checkers
+    (data.checkers || []).forEach((chk: any, index: number) => {
+      this.checkers.push(
+        new FormGroup({
+          checker: new FormControl(index + 1),
+          groupList: new FormControl(chk.groupList || []),
+          userList: new FormControl(chk.userList || [])
+        })
+      );
+    });
+
+    // ✅ Patch Authorizers
+    (data.authorizers || []).forEach((auth: any, index: number) => {
+      this.authorizers.push(
+        new FormGroup({
+          authorizer: new FormControl(index + 1),
+          groupList: new FormControl(auth.groupList || []),
+          userList: new FormControl(auth.userList || [])
+        })
+      );
+    });
+    this.rulesForm.get('ruleName')?.disable();
+    this.originalEditRuleData = this.rulesForm?.getRawValue();
+
+  }
+
+  resetRules() {
+    this.rulesForm.reset();
+    this.rulesForm.get('ruleName')?.enable();
+    this.rulesForm.get('isEnabled')?.patchValue(true, { emitEvent: false, onlySelf: true });
+    this.rulesForm.updateValueAndValidity();
+    this.checkerUserList = [];
+    this.authorizerUserList = [];
+    this.checkerGroupList = [];
+    this.authorizerGroupList = [];
+    this.isEditRuleEnable = false;
+    this.editedRuleIndex = null;
+  }
+
+  submit() {
+    const checkers = this.checkers.value.map((c: any) => ({
+      checker: String(c.level),
+      groupList: c.groupList || [],
+      userList: c.userList || []
+    }));
+
+    const authorizers = this.authorizers.value.map((a: any) => ({
+      authorizer: String(a.level),
+      groupList: a.groupList || [],
+      userList: a.userList || []
+    }));
+
+    const finalOutput = [...checkers, ...authorizers];
+
+    console.log(finalOutput);
+  }
+
+  // showRulePreview(data: any) {
+
+  //   this.modal.info({
+  //     nzTitle: 'Rule Information',
+  //     nzWidth: 800,
+  //     nzContent: this.getPreviewTemplate(data),
+  //     nzOkText: 'Close'
+  //   });
+  // }
+
+  @ViewChild('rulePreview', { static: true }) rulePreview!: TemplateRef<any>;
+
+  showRulePreview(data: any) {
+
+    this.modal.info({
+      nzTitle: 'Rule Information',
+      nzWidth: 800,
+      nzContent: this.rulePreview,
+      nzData: data
+    });
+  }
+  validateUserCombination(): boolean {
+    const checker = this.rulesForm.get('checkerCount')?.value || 0;
+    const authorizer = this.rulesForm.get('authorizerCount')?.value || 0;
+
+    //  UNIQUE USERS 
+    const uniqueUsers = new Set<string>();
+
+    console.log(this.addUserList);
+    console.log(this.addGUserList);
+
+    const makerUsers = [
+      // Individual users
+      ...(this.addUserList || [])
+        .filter((u: any) => u.groupUserRole?.includes('MAKER'))
+        .map((u: any) => ({
+          userId: u.userId,
+          roles: u.groupUserRole
+        })),
+
+      // Group users
+      ...(this.addGUserList || [])
+        .filter((g: any) => g.groupRole?.includes('MAKER'))
+        .map((g: any) => ({
+          userId: g.userId,
+          roles: g.groupRole // normalize
+        }))
+    ];
+    const singleMakerWithExtraRole =
+      makerUsers.length === 1 &&
+      makerUsers[0].roles.length > 1;
+
+    const invalidUserId = singleMakerWithExtraRole
+      ? makerUsers[0].userId
+      : null;
+
+
+    // Individual users
+    if (this.hasOnlyMaker()) {
+      (this.checkerUserList || []).forEach((u: any) => uniqueUsers.add(u));
+      (this.authorizerUserList || []).forEach((u: any) => uniqueUsers.add(u));
+    } else {
+      (this.checkerUserList || []).forEach((id: any) => {
+        if (id !== invalidUserId) {
+          uniqueUsers.add(id);
+        }
+      });
+
+      (this.authorizerUserList || []).forEach((id: any) => {
+        if (id !== invalidUserId) {
+          uniqueUsers.add(id);
+        }
+      });
+    }
+
+
+
+
+
+
+    // Group users
+    const checkerGroupUsers = this.getCheckerGroupUsers();
+    const authorizerGroupUsers = this.getAuthorizerGroupUsers();
+
+    if (this.hasOnlyMaker()) {
+      checkerGroupUsers.forEach((u: any) => uniqueUsers.add(u.userId));
+      authorizerGroupUsers.forEach((u: any) => uniqueUsers.add(u.userId));
+    } else {
+      checkerGroupUsers.forEach((u: any) => {
+        if (u.userId !== invalidUserId) {
+          uniqueUsers.add(u.userId);
+        }
+      });
+
+      authorizerGroupUsers.forEach((u: any) => {
+        if (u.userId !== invalidUserId) {
+          uniqueUsers.add(u.userId);
+        }
+      });
+    }
+
+    let totalUsers = 0
+    if (this.hasOnlyMaker()) {
+      totalUsers = uniqueUsers.size;
+    } else if (invalidUserId) {
+      totalUsers = uniqueUsers.size; // add back the single maker with extra role
+    } else {
+      totalUsers = uniqueUsers.size - 1;
+    }
+
+
+    // REQUIRED USERS (1 Maker + others)
+    const totalRequired = checker + authorizer;
+
+    if (totalRequired > totalUsers) {
+      this.notification.remove();
+      this.notification.warning(
+        'Invalid Combination',
+        `Only ${totalUsers} users are available for the combination.`
+      );
+
+      // Only reset in ADD mode
+      this.rulesForm.patchValue({
+        checkerCount: 0,
+        authorizerCount: 0
+      }, { emitEvent: false });
+
+
+      return false;
+    }
+
+    // MAKER VALIDATIOn
+    const hasMaker =
+      this.addUserList?.some((u: any) =>
+        u.groupUserRole?.includes('MAKER')
+      ) ||
+      this.addGUserList?.some((g: any) =>
+        g.groupRole?.includes('MAKER')
+      );
+
+    if (!hasMaker) {
+      this.notification.warning('Error', 'No Maker available');
+      return false;
+    }
+
+    return true;
+  }
+  hasOnlyMaker(): boolean {
+    const individual = (this.addUserList || []).some((u: any) =>
+      u.groupUserRole?.length === 1 &&
+      u.groupUserRole.includes('MAKER')
+    );
+
+    const group = (this.addGUserList || []).some((g: any) =>
+      g.groupRole?.length === 1 &&
+      g.groupRole.includes('MAKER')
+    );
+
+    return individual || group;
+  }
+
+  addForm() {
+    this.editallforms = false;
+    if (this.SelectedTabIndex === 1) {
+      if (this.activeUserIndex === 0) {
+        this.addCustForm.get('users')?.reset();
+        this.addCustForm.get('users.userId')?.enable();
+        this.isIndividualTab = true;
+        this.isGroupTab = false;
+        this.isruleTab = false
+      }
+      else if (this.activeUserIndex === 1) {
+        this.addCustForm.get('groupUser')?.reset();
+        this.addCustForm.get('groupUser.userId')?.enable();
+        this.isIndividualTab = false;
+        this.isGroupTab = true;
+        this.isruleTab = false
+      }
+    } else if (this.SelectedTabIndex === 2) {
+      this.rulesForm?.reset();
+      this.rulesForm.get('ruleName')?.enable();
+      this.isIndividualTab = false;
+      this.isGroupTab = false;
+      this.isruleTab = true
+    }
+  }
+
+  prepareCompareData(data: any) {
+    return {
+      multipleCifList: data.multipleCifList || [],
+
+      groupEnableList: (data.groupEnableList || []).map((x: any) => ({
+        groupName: x.groupName,
+        groupDescription: x.groupDescription,
+        isEnabled: x.isEnabled,
+        selectedAccounts: x.selectedAccounts || [],
+        toLimit: x.toLimit,
+        fromLimit: x.fromLimit,
+        groupRole: x.groupRole,
+        cifId: x.cifId || []
+      })),
+
+      // ---------------- ADD USER LIST ----------------
+      addUserList: (data.addUserList || []).map((x: any) => ({
+        subProductAccess: x.subProductAccess || [],
+        emailId: x.emailId,
+        mobileNo: x.mobileNo,
+        userId: x.userId,
+        userFName: x.userFName,
+        fromLimit: x.fromLimit,
+        productAccess: x.productAccess || [],
+        groupName: x.groupName || [],
+        userLName: x.userLName,
+        groupUserRole: x.groupUserRole || [],
+        isEnabled: x.isEnabled,
+        accountNo: x.accountNo || [],
+        isGroupUser: x.isGroupUser,
+        toLimit: x.toLimit,
+        cifId: x.cifId || [],
+      })),
+
+      // ---------------- ADD GROUP USER LIST ----------------
+      addGUserList: (data.addGUserList || []).map((x: any) => ({
+        productAccess: x.productAccess || [],
+        groupName: x.groupName || [],
+        userLName: x.userLName,
+        subProductAccess: x.subProductAccess || [],
+        isEnabled: x.isEnabled,
+        isGroupUser: x.isGroupUser,
+        emailId: x.emailId,
+        mobileNo: x.mobileNo,
+        userId: x.userId,
+        userFName: x.userFName,
+        cifId: x.cifId || [],
+      })),
+
+      // ---------------- RULES LIST ----------------
+      rulesList: (data.rulesList || []).map((x: any) => ({
+        authMatrix: x.authMatrix,
+        isEditable: x.isEditable,
+        setRuleOn: x.setRuleOn,
+        checkers: (x.checkers || []).map((c: any) => ({
+          userList: c.userList || [],
+          groupList: c.groupList || [],
+          checker: c.checker
+        })),
+        checkerCount: x.checkerCount,
+        isEnabled: x.isEnabled,
+        ruleName: x.ruleName,
+        accounts: x.accounts || [],
+        authorizers: (x.authorizers || []).map((a: any) => ({
+          userList: a.userList || [],
+          groupList: a.groupList || [],
+          authorizer: a.authorizer
+        })),
+        authorizerCount: x.authorizerCount,
+        domainId: x.domainId,
+        cifId: x.cifId || []
+      })),
+
+      addCustForm: {
+        groupEnable: data.addCustForm?.groupEnable,
+        multipleCif: data.addCustForm?.multipleCif,
+        domainId: data.addCustForm?.domainId
+      }
+    };
+  }
+  handleCancel() {
+    this.isIndividualTab = false;
+  }
+  handleGroupCancel() {
+    this.isGroupTab = false;
+  }
+  changeUserTab(event: any): void {
+    this.activeUserIndex = event.index;
+  }
+  handleRuleCancel(){
+    this.isruleTab = false;
+  }
+
+  constructor(
+    private store: Store,
+    private router: Router,
+    private modal: NzModalService,
+    private service: DashboardService,
+    private notification: NzNotificationService,
+    private loaderService: LoaderService,
+    private _cdr: ChangeDetectorRef
+  ) {
+    this.addCustForm = new FormGroup({
+      groupEnable: new FormControl(false),
+      multipleCif: new FormControl(false),
+      domainId: new FormControl({ value: '', disabled: true }, [Validators.required]),
+      cifs: new FormGroup({
+        cifId: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        custName: new FormControl({ value: '', disabled: true }),
+        corporateId: new FormControl({ value: '', disabled: true }),
+        ieCode: new FormControl({ value: '', disabled: true }),
+      }),
+      groups: new FormGroup({
+        groupName: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        groupDescription: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        cifId: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        groupRole: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        fromLimit: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        toLimit: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        selectedAccounts: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        isEnabled: new FormControl({ value: true, disabled: false }, [Validators.required]),
+      }),
+      groupUser: new FormGroup({
+        userId: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        userFName: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        userLName: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        mobileNo: new FormControl({ value: '', disabled: false }, [Validators.maxLength(10), Validators.required, Validators.pattern(/^[1-9][0-9]{9}$/)]),
+        emailId: new FormControl({ value: '', disabled: false }, [Validators.email, Validators.required]),
+        groupName: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        productAccess: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        subProductAccess: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        isTwoFactorEnabled: new FormControl(''),
+        isEmail: new FormControl(''),
+        isSms: new FormControl(''),
+        isEnabled: new FormControl({ value: true, disabled: false }, [Validators.required]),
+      }),
+      users: new FormGroup({
+        userId: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        userFName: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        userLName: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        mobileNo: new FormControl({ value: '', disabled: false }, [Validators.maxLength(10), Validators.required, Validators.pattern(/^[1-9][0-9]{9}$/)]),
+        emailId: new FormControl({ value: '', disabled: false }, [Validators.email, Validators.required]),
+        cifId: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        accountNo: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        groupUserRole: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        fromLimit: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        toLimit: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        productAccess: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        subProductAccess: new FormControl({ value: [], disabled: false }, [Validators.required]),
+        isEnabled: new FormControl({ value: true, disabled: false }, [Validators.required]),
+        isTwoFactorEnabled: new FormControl(''),
+        isEmail: new FormControl(''),
+        isSms: new FormControl('')
+      }),
+      rules: new FormGroup({
+        // selectionType: new FormControl({ value: [], disabled: false }),
+        // noOfUsers: new FormControl({ value: '', disabled: false }),
+        groupName: new FormControl({ value: [], disabled: false }),
+        authorizerCount: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        checkerCount: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        // fromLimit: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        // toLimit: new FormControl({ value: '', disabled: false }, [Validators.required]),
+        isEnabled: new FormControl({ value: true, disabled: false }, [Validators.required]),
+      }),
+    });
+
+    this.rulesForm = new FormGroup({
+      ruleName: new FormControl({ value: '', disabled: false }, [Validators.required]),
+      setRuleOn: new FormControl({ value: '', disabled: false }, [Validators.required]),
+      domainId: new FormControl({ value: '', disabled: true }),
+      cifId: new FormControl({ value: [], disabled: false }),
+      accounts: new FormControl({ value: [], disabled: false }),
+      authorizerCount: new FormControl({ value: '', disabled: false }, [Validators.required]),
+      checkerCount: new FormControl({ value: '', disabled: false }, [Validators.required]),
+      isEnabled: new FormControl({ value: true, disabled: false }),
+      checkers: new FormArray([]),
+      authorizers: new FormArray([]),
+    })
+
+  }
+}

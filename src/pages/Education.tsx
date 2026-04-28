@@ -27,7 +27,7 @@ export default function Education() {
             chaos={0.12}
             style={{ borderRadius: 16 }}
           > */}
-            <Card title={<h3>Secondary School Certificate (SSC)</h3>}>
+            <Card title={<h3 className="cardTitle">Secondary School Certificate (SSC)</h3>}>
               <Carousel autoplay>
                 <div className="carouselImageWrapper">
                   <img src={s1} alt="SSC" className="cardImage" />
@@ -52,7 +52,7 @@ export default function Education() {
             chaos={0.12}
             style={{ borderRadius: 16 }}
           > */}
-            <Card title={<h3>Higher Secondary Certificate (HSC)</h3>} extra={<a href="https://www.basweshwarcollegelatur.com/">Visit</a>}>
+            <Card title={<h3 className="cardTitle">Higher Secondary Certificate (HSC)</h3>} extra={<a href="https://www.basweshwarcollegelatur.com/">Visit</a>}>
               <Carousel autoplay>
                 <div className="carouselImageWrapper">
                   <img src={m1} alt="HSC" className="cardImage" />
@@ -85,7 +85,7 @@ export default function Education() {
             chaos={0.12}
             style={{ borderRadius: 16 }}
           > */}
-            <Card title={<h3>Bachelor's of Engineering (BE)</h3>} extra={<a href="https://mmit.edu.in/">Visit</a>}>
+            <Card title={<h3 className="cardTitle">Bachelor's of Engineering (BE)</h3>} extra={<a href="https://mmit.edu.in/">Visit</a>}>
             <Carousel autoplay>
                 <div className="carouselImageWrapper">
                   <img src={mm1} alt="MMIT" className="cardImage" />

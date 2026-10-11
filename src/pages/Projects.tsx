@@ -46,7 +46,7 @@ const projects = [
     ],
     technologies: ['HTML', 'CSS', 'JavaScript', 'Bootstrap', 'REST API'],
     githubUrl: '', // Add your GitHub repository URL
-    liveUrl: '', // Add your live demo URL
+    liveUrl: 'https://imran9119.github.io/WeatherApp', // Add your live demo URL
   },
   {
   id: 3,
@@ -64,7 +64,7 @@ const projects = [
   ],
   technologies: ['HTML', 'CSS', 'JavaScript'],
   githubUrl: '', // Add your GitHub repository URL
-  liveUrl: '', // Add your live demo URL
+  liveUrl: 'https://imran9119.github.io/Agecalculator',
 },
 ];
 

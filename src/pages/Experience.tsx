@@ -108,11 +108,11 @@ const experiences = [
   },
 ];
 
-function ExperienceCard({ experience }) {
+function ExperienceCard({ experience }: { experience: any }) {
   return (
     <div
       className="experience-card-wrapper"
-      style={{ '--experience-color': experience.color }}
+      style={{ '--experience-color': experience.color } as React.CSSProperties}
     >
       <Card className="experience-card" bordered={false}>
         <div className="experience-card-top">
@@ -150,7 +150,7 @@ function ExperienceCard({ experience }) {
         </div>
 
         <div className="experience-tech-stack">
-          {experience.technologies.map((tech) => (
+          {experience.technologies.map((tech:any) => (
             <Tag key={tech} className="experience-tech-tag">
               {tech}
             </Tag>
@@ -163,7 +163,7 @@ function ExperienceCard({ experience }) {
         </div>
 
         <div className="experience-achievements">
-          {experience.achievements.map((achievement) => (
+          {experience.achievements.map((achievement: any) => (
             <div
               className="experience-achievement"
               key={achievement.title}
@@ -252,7 +252,7 @@ export default function Experience() {
             >
               <div
                 className="experience-timeline-marker"
-                style={{ '--experience-color': experience.color }}
+                style={{ '--experience-color': experience.color } as React.CSSProperties}
               >
                 <Tooltip title={experience.company}>
                   <span>{experience.icon}</span>

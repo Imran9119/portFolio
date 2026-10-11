@@ -35,7 +35,6 @@ import {
   ExperimentOutlined,
   CloudUploadOutlined,
   TeamOutlined,
-  RobotOutlined,
 } from '@ant-design/icons';
 
 import '../styling/TechStack.css';
@@ -161,7 +160,7 @@ export default function TechStack() {
                       <div className="tech-skill" key={skill.name}>
                         <div
                           className="tech-skill-logo"
-                          style={{ '--skill-color': skill.color }}
+                          style={{ '--skill-color': skill.color }as React.CSSProperties}
                         >
                           <SkillIcon />
                         </div>

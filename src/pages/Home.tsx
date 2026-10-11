@@ -6,8 +6,6 @@ import {
   CodeOutlined,
   RocketOutlined,
   ApiOutlined,
-  GithubOutlined,
-  LinkedinOutlined,
 } from '@ant-design/icons';
 
 import profile from '../assets/profile_01.png';

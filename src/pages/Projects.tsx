@@ -68,11 +68,11 @@ const projects = [
 },
 ];
 
-function ProjectCard({ project }) {
+function ProjectCard({ project }: { project: any }) {
   return (
     <div
       className="project-card-wrapper"
-      style={{ '--project-color': project.color }}
+      style={{ '--project-color': project.color } as React.CSSProperties}
     >
       <Card className="project-card" bordered={false}>
         <div className="project-card-header">
@@ -89,7 +89,7 @@ function ProjectCard({ project }) {
         <p className="project-description">{project.description}</p>
 
         <div className="project-features">
-          {project.features.map((feature) => (
+          {project.features.map((feature: any) => (
             <div className="project-feature" key={feature}>
               <span className="project-feature-check">✓</span>
               <span>{feature}</span>
@@ -103,7 +103,7 @@ function ProjectCard({ project }) {
         </div>
 
         <div className="project-tech-stack">
-          {project.technologies.map((tech) => (
+          {project.technologies.map((tech: any) => (
             <Tag className="project-tech-tag" key={tech}>
               {tech}
             </Tag>

@@ -1,5 +1,6 @@
 import { Card, Carousel, Col, Row } from 'antd';
 import '../shared/Utility.css';
+import '../styling/Education.css';
 // import ElectricBorder from '../shared/ElectricBorder ';
 import s1 from '../assets/s1.png';
 import s2 from '../assets/s2.png';
@@ -18,7 +19,7 @@ import mm7 from '../assets/mm7.png';
 export default function Education() {
   return (
     <>
-      <div className='mb-30'>Education</div>
+      <div className='m-40 h2'>Education</div>
       <Row gutter={[24, 24]} align="middle">
         <Col xs={24} sm={24} md={8} lg={8}>
           {/* <ElectricBorder
@@ -106,7 +107,7 @@ export default function Education() {
                   <img src={mm7} alt="MMIT" className="cardImage" />
                 </div>
               </Carousel>
-              <h4>Marathwada Mitra Mandal's Institute of Technology, Pune</h4>
+              <h3>Marathwada Mitra Mandal's Institute of Technology, Pune</h3>
               <h3>
                 Branch: Computer Science
               </h3>

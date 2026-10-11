@@ -20,39 +20,60 @@ export default function Header() {
     "5": "techstack",
   };
 
-  const onChange = (key: string) => {
+ const onChange = (key: string) => {
+  setActiveKey(key);
+
   document.getElementById(sectionMap[key])?.scrollIntoView({
     behavior: "smooth",
     block: "start",
   });
 
-  // remove focus from clicked tab
   setTimeout(() => {
     (document.activeElement as HTMLElement)?.blur();
   }, 50);
 };
 
-  useEffect(() => {
-    const sections = document.querySelectorAll("section");
+    useEffect(() => {
+    const sectionMap: Record<string, string> = {
+      home: "1",
+      education: "2",
+      experience: "3",
+      projects: "4",
+      techstack: "5",
+    };
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            if (entry.target.id === "home") setActiveKey("1");
-            if (entry.target.id === "education") setActiveKey("2");
-            if (entry.target.id === "experience") setActiveKey("3");
-            if (entry.target.id === "projects") setActiveKey("4");
-            if (entry.target.id === "techstack") setActiveKey("5");
-          }
-        });
-      },
-      { threshold: 0.6 }
-    );
+    const updateActiveTab = () => {
+      const sections = [
+        "home",
+        "education",
+        "experience",
+        "projects",
+        "techstack",
+      ];
 
-    sections.forEach((section) => observer.observe(section));
+      const activationPoint = window.innerHeight * 0.35;
+      let currentSection = "home";
 
-    return () => observer.disconnect();
+      sections.forEach((id) => {
+        const section = document.getElementById(id);
+
+        if (section && section.getBoundingClientRect().top <= activationPoint) {
+          currentSection = id;
+        }
+      });
+
+      setActiveKey(sectionMap[currentSection]);
+    };
+
+    window.addEventListener("scroll", updateActiveTab, { passive: true });
+    window.addEventListener("resize", updateActiveTab);
+
+    updateActiveTab();
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveTab);
+      window.removeEventListener("resize", updateActiveTab);
+    };
   }, []);
 
   return (
